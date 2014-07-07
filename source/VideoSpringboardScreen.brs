@@ -47,8 +47,8 @@ Sub videoSetupButtons()
     m.ClearButtons()
 
 	video = m.metadata
-
-    if (video.LocationType = "filesystem" Or video.LocationType = "remote") And video.PlayAccess = "Full" And video.IsPlaceHolder = false
+	' rewster: The LiveTV buttons were never added as the else if was never hit.
+    if (video.LocationType = "filesystem" Or video.LocationType = "remote") And video.PlayAccess = "Full" And video.IsPlaceHolder = false And video.ContentType <> "Program"
 
 		' This screen is also used for books and games, so don't show a play button
 		if video.MediaType = "Video" then
@@ -92,25 +92,38 @@ Sub videoSetupButtons()
 
     else if (video.ContentType = "Program") And video.PlayAccess = "Full"
 	
-        if canPlayProgram(video)
+        IsCurrentlyRecording = IsProgramIdRecording(video.ProgramId)
+        if canPlayProgram(video) And IsCurrentlyRecording = true then
+			m.AddButton("Play - Currently Recording", "play")
+		else if canPlayProgram(video)
 			m.AddButton("Play", "play")
         end if
 
-        if video.TimerId <> invalid
-			m.AddButton("Cancel recording", "cancelrecording")
+		if IsCurrentlyRecording = false then
+		
+        	if video.TimerId <> invalid
+				m.AddButton("Cancel recording", "cancelrecording")
 			
-        else if canRecordProgram(video)
-			m.AddButton("Schedule recording", "record")
-        end if
+			else if canPlayProgram(video)
+				m.AddButton("Record", "record")
+			
+        	else if canRecordProgram(video)
+				m.AddButton("Schedule recording", "record")
+        	end if
 
+    	end if
+		
     end if
 
     if video.ContentType = "Recording"
         m.AddButton("Delete", "delete")
     end if
 
-    m.AddButton("More...", "more")
-
+    ' rewster: TV Program recording does not need a more button, and displaying it stops the back button from appearing on programmes that have past
+	if video.ContentType <> "Program"
+		m.AddButton("More...", "more")
+	end if
+	
     if m.buttonCount = 0
 		m.AddButton("Back", "back")
     end if
@@ -299,6 +312,10 @@ Function handleVideoSpringboardScreenMessage(msg) As Boolean
             else if buttonCommand = "more" then
                 m.ShowMoreDialog(item)
 
+			' rewster: handle the back button
+			else if buttonCommand = "back" then
+				m.ViewController.PopScreen(m)
+							
             else
                 handled = false
             end if
@@ -731,6 +748,8 @@ Sub springboardCancelTimer (item)
 	if showCancelLiveTvTimerDialog() = "1" then
         cancelLiveTvTimer(item.TimerId)
 	end if
+	' rewster: Did not seem to refreshOnActivate, maybe Roku 3 issue	
+	m.Refresh(true)
 End Sub
 
 Sub springboardRecordProgram(item)
@@ -738,4 +757,16 @@ Sub springboardRecordProgram(item)
 
     timerInfo = getDefaultLiveTvTimer(item.ProgramId)
     createLiveTvTimer(timerInfo)
+
+	' Check if the currently program is on now, if so check the recording has been set as the TimerId is not set for the buttons
+	if canPlayProgram(timerInfo) = true 
+		counter = 0
+		While IsProgramIdRecording(item.ProgramId) = false And counter < 5
+			sleep(1000)
+			counter = counter + 1
+		End While
+	End If	
+
+	' rewster: Did not seem to refreshOnActivate, maybe Roku 3 issue
+	m.Refresh(true)
 End Sub
