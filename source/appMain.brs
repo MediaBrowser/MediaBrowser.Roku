@@ -89,7 +89,7 @@ Sub initGlobals()
         models["3100X"] = "Roku 2 XS"
         models["3400X"] = "Roku Streaming Stick"
         models["3420X"] = "Roku Streaming Stick"
-        models["3500R"] = "Roku Stream42ing Stick (2014)"
+        models["3500R"] = "Roku Streaming Stick (2014)"
         models["4200X"] = "Roku 3"
         models["4200R"] = "Roku 3"
 
