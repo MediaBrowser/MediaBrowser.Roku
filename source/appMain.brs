@@ -124,7 +124,7 @@ Sub initGlobals()
     ' on at least one test video there were noticeable artifacts as the
     ' number increased, starting with 8.
     if left(modelNumber,4) = "4200" and major >=5 then
-	GetGlobalAA().AddReplace("maxRefFrames", 10)
+	GetGlobalAA().AddReplace("maxRefFrames", 12)
     elseif major >= 4 then
         GetGlobalAA().AddReplace("maxRefFrames", 8)
     else
