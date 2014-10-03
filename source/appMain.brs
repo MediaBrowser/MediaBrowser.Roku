@@ -122,8 +122,8 @@ Sub initGlobals()
     ' Roku 2 has been observed to play all the way up to 16 ReFrames, but
     ' on at least one test video there were noticeable artifacts as the
     ' number increased, starting with 8.
-    if major >=5 then
-        GetGlobalAA().AddReplace("maxRefFrames", 10)
+    if modelNumber = "4200X" and major >=5 then
+	GetGlobalAA().AddReplace("maxRefFrames", 10)
     elseif major >= 4 then
         GetGlobalAA().AddReplace("maxRefFrames", 8)
     else
