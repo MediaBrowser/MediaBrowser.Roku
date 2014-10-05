@@ -508,19 +508,24 @@ Function videoCanDirectPlay(mediaSource, audioStream, videoStream, subtitleStrea
             return false
         end if
 
-        if surroundSound AND (surroundCodec = "ac3" OR stereoCodec = "ac3") then
-            'mediaItem.canDirectPlay = true
-            return true
-        end if
+        if audioStream <> invalid then
 
-        if surroundStreamFirst then
-            Debug("videoCanDirectPlay: first audio stream is unsupported 5.1")
-            return false
-        end if
+	    debug("Audiochannels: " + tostr(audiostream.channels)
 
-        if stereoCodec = "aac" then
-            'mediaItem.canDirectPlay = true
-            return true
+            if surroundSound AND audioStream.codec = "ac3" then
+                'mediaItem.canDirectPlay = true
+                return true
+            end if
+
+            if surroundStreamFirst then
+                Debug("videoCanDirectPlay: first audio stream is unsupported 5.1")
+                return false
+            end if
+
+            if audiostream.channels <= 2 AND audioStream.codec = "aac" then
+                'mediaItem.canDirectPlay = true
+                return true
+            end if
         end if
 
         if stereoCodec = invalid AND numAudioStreams = 0 AND major >= 4 then
@@ -589,22 +594,34 @@ Function videoCanDirectPlay(mediaSource, audioStream, videoStream, subtitleStrea
             end if
         end if
 
-        if surroundSound AND (surroundCodec = "ac3" OR stereoCodec = "ac3") then
-            'mediaItem.canDirectPlay = true
-            return true
+        if audioStream <> invalid then
+
+	    debug("Audiochannels: " + tostr(audiostream.channels)
+
+            if surroundSound AND audioStream.codec = "ac3" then
+                'mediaItem.canDirectPlay = true
+                return true
+            end if
+
+            if surroundSoundDCA AND audioStream.codec = "dca" then
+                'mediaItem.canDirectPlay = true
+                return true
+            end if
+
+            if surroundStreamFirst then
+                Debug("videoCanDirectPlay: first audio stream is unsupported 5.1")
+                return false
+            end if
+
+            if audiostream.channels <= 2 AND (audioStream.codec = "aac" OR audioStream.codec = "mp3") then
+                'mediaItem.canDirectPlay = true
+                return true
+            end if
         end if
 
-        if surroundSoundDCA AND (surroundCodec = "dca" OR stereoCodec = "dca") then
-            'mediaItem.canDirectPlay = true
-            return true
-        end if
-
-        if surroundStreamFirst then
-            Debug("videoCanDirectPlay: first audio stream is unsupported 5.1")
-            return false
-        end if
-
-        if stereoCodec <> invalid AND (stereoCodec = "aac" OR stereoCodec = "mp3") then
+        if stereoCodec = invalid AND numAudioStreams = 0 AND major >= 4 then
+            ' If everything else looks ok and there are no audio streams, that's
+            ' fine on Roku 2+.
             'mediaItem.canDirectPlay = true
             return true
         end if
