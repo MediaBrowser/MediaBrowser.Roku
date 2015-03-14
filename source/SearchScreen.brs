@@ -30,11 +30,95 @@ Function createSearchScreen(viewController as Object) As Object
     obj.History = history
 
     obj.SetText = ssSetText
+	
+	obj.SearchPeople = false
+	obj.OptionsDialog = ssOptionsDialog
+	obj.PeopleToggleLabel = ssPeopleToggleLabel
 
     NowPlayingManager().SetFocusedTextField("Search", "", false)
 
     return obj
 
+End Function
+
+Function ssPeopleToggleLabel() As String
+	
+	label = "Include People In Search: "
+	if m.SearchPeople then
+		label = label + "YES"
+	else
+		label = label + "NO"
+	end if	
+	
+	return label
+End Function
+
+Sub ssOptionsDialog()
+
+    dlg = createBaseDialog()
+    dlg.Title = "Search Options"
+
+	label = m.PeopleToggleLabel()
+	dlg.SetButton("peopletoggle", label)
+
+	dlg.item = m.Item
+	dlg.parentScreen = m
+
+	dlg.HandleMessage = ssHandleDialogMessage	
+	dlg.HandleButton = handleOptionsButton
+
+    dlg.SetButton("close", "Close")
+    dlg.Show()
+	
+End Sub
+
+Function handleOptionsButton(command, data) As Boolean
+
+	parent = m.parentScreen
+
+	if command = "peopletoggle" then
+		Debug("JM Toggle People")
+		
+		'Is there a better way to do (boolVal = !boolVal) in brightscript?
+		if parent.SearchPeople = true then
+			parent.SearchPeople = false
+		else
+			parent.SearchPeople = true
+		end if	
+		
+		label = parent.PeopleToggleLabel()
+		m.Screen.UpdateButton(0, label)
+        return true
+    else if command = "close" then
+		m.Screen.Close()
+        return true
+    end if
+	
+    return false
+
+End Function
+
+'****************************************************************
+'*** ssHandleDialogMessage is an override for dialogHandleMessage(msg)
+'*** this keeps the dialog open after selection, when appropriate
+'****************************************************************
+Function ssHandleDialogMessage(msg) As Boolean
+
+    if type(msg) = "roMessageDialogEvent" then
+        if msg.isScreenClosed() then
+            m.ViewController.PopScreen(m)
+			return true
+        else if msg.isButtonPressed() then
+            command = m.ButtonCommands[msg.getIndex()]
+            Debug("Button pressed: " + tostr(command))
+            if m.HandleButton <> invalid then
+                m.HandleButton(command, msg.getData())
+            end if
+			return true
+        end if
+    end if
+
+    return false
 End Function
 
 Function ssHandleMessage(msg) As Boolean
@@ -78,6 +162,12 @@ Function ssHandleMessage(msg) As Boolean
 			handled = true
             m.SetText(msg.GetMessage(), true)
 
+		else if msg.isRemoteKeyPressed() then
+
+			if msg.GetIndex() = 10 then
+				m.OptionsDialog()
+			end if
+			
         end if
 
     end if
@@ -92,7 +182,18 @@ Sub ssOnTimerExpired(timer)
 
 	term = m.SearchTerm
     length = len(term)
-
+	
+	'Setup the values to indicate that we do, or do not want people returned from the query
+	peopleToggleString = "false"
+	itemTypesCSV = "Movie,BoxSet,Series,Episode,Trailer,Video,AdultVideo,MusicVideo,Genre,MusicGenre,MusicArtist"
+	
+	if m.SearchPeople then
+		peopleToggleString = "true"
+		itemTypesCSV = itemTypesCSV + ",Person"
+	end if
+	
+	Debug("JM our strings are: " + peopleToggleString + " and " + itemTypesCSV)
+	
     if length > 0
 		' URL
 		url = GetServerBaseUrl() + "/Search/Hints"
@@ -103,9 +204,9 @@ Sub ssOnTimerExpired(timer)
 			UserId: getGlobalVar("user").Id
 			Limit: "15"
 			SearchTerm: term
-			IncludePeople: "false"
+			IncludePeople: peopleToggleString
 			IncludeStudios: "false"
-			IncludeItemTypes: "Movie,BoxSet,Series,Episode,Trailer,Video,AdultVideo,MusicVideo,Genre,MusicGenre,MusicArtist"
+			IncludeItemTypes: itemTypesCSV
 		}
 
 		' Prepare Request
@@ -170,6 +271,7 @@ Sub ssSetText(text, isComplete)
         item = CreateObject("roAssociativeArray")
         item.Title = "Search for '" + text + "'"
         item.searchTerm = text
+		item.SearchPeople = m.SearchPeople
 
         m.ViewController.CreateScreenForItem(item, invalid, [item.Title])
 
@@ -179,26 +281,30 @@ Sub ssSetText(text, isComplete)
 
 End Sub
 
-Function createSearchResultsScreen(viewController as Object, searchTerm As String) As Object
+Function createSearchResultsScreen(viewController as Object, searchTerm As String, searchPeople=false) As Object
 
     imageType      = 0
 
-	names = ["Movies", "TV", "Trailers", "Videos", "Genres", "Artists"]
-	keys = ["0", "1", "2", "3", "4", "5"]
+	names = ["Movies", "TV", "People", "Trailers", "Videos", "Genres", "Artists"]
+	keys = ["0", "1", "2", "3", "4", "5", "6"]
 
 	loader = CreateObject("roAssociativeArray")
 	loader.getUrl = getSearchResultRowUrl
 	loader.parsePagedResult = parseSearchResultScreenResult
 	loader.searchTerm = searchTerm
-
+	loader.searchPeopleString = "false"
+	if searchPeople then
+		loader.searchPeopleString = "true"
+	end if	
+	
 	screen = createPaginatedGridScreen(viewController, names, keys, loader, "two-row-flat-landscape-custom")
-
+	
     return screen
 
 End Function
 
 Function getSearchResultRowUrl(row as Integer, id as String) as String
-
+	
     searchTerm = m.searchTerm
 
     url = GetServerBaseUrl() + "/Search/Hints?UserId=" + getGlobalVar("user").Id
@@ -216,32 +322,39 @@ Function getSearchResultRowUrl(row as Integer, id as String) as String
 	else if row = 1
 		query = {
 			SearchTerm: searchTerm
-			IncludePeople: "false"
+			IncludePeople: m.searchPeopleString
 			IncludeStudios: "false"
 			IncludeItemTypes: "Series,Episode"
 		}
 	else if row = 2
 		query = {
 			SearchTerm: searchTerm
-			IncludePeople: "false"
+			IncludePeople: m.searchPeopleString
 			IncludeStudios: "false"
-			IncludeItemTypes: "Trailer"
+			IncludeItemTypes: "Person"
 		}
 	else if row = 3
 		query = {
 			SearchTerm: searchTerm
 			IncludePeople: "false"
 			IncludeStudios: "false"
-			IncludeItemTypes: "Video,AdultVideo,MusicVideo"
+			IncludeItemTypes: "Trailer"
 		}
 	else if row = 4
 		query = {
 			SearchTerm: searchTerm
 			IncludePeople: "false"
 			IncludeStudios: "false"
-			IncludeItemTypes: "Genre,MusicGenre"
+			IncludeItemTypes: "Video,AdultVideo,MusicVideo"
 		}
 	else if row = 5
+		query = {
+			SearchTerm: searchTerm
+			IncludePeople: "false"
+			IncludeStudios: "false"
+			IncludeItemTypes: "Genre,MusicGenre"
+		}
+	else if row = 6
 		query = {
 			SearchTerm: searchTerm
 			IncludePeople: "false"
