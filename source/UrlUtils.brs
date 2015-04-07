@@ -1,5 +1,5 @@
 '**********************************************************
-'**  Media Browser Roku Client - URL Utilities
+'**  Emby Roku Client - URL Utilities
 '**********************************************************
 
 '**********************************************************
@@ -127,6 +127,13 @@ Function http_authorization() As Void
 		if accessToken <> invalid and accessToken <> "" then
 			m.Http.AddHeader("X-MediaBrowser-Token", accessToken)
 		end if		
+	end if
+	
+	currentUrl = firstOf(m.GetUrl(), "")
+	
+	if currentUrl.instr("https") > -1 then 
+		m.Http.SetCertificatesFile("common:/certs/ca-bundle.crt")
+		m.Http.InitClientCertificates()
 	end if
 	
 End Function
