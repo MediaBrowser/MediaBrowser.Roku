@@ -24,7 +24,7 @@ Function getDirectPlayProfiles()
 		Container: audioContainers
 	})
 	
-	mp4Audio = "aac"
+	mp4Audio = "aac,mp3"
 	
 	if surroundSound then
 		mp4Audio = mp4Audio + ",ac3"
@@ -141,7 +141,7 @@ Function getCodecProfiles()
 	h264Conditions.push({
 		Condition: "LessThanEqual"
 		Property: "VideoLevel"
-		Value: "41"
+		Value: "51"
 		IsRequired: false
 	})
 	h264Conditions.push({
