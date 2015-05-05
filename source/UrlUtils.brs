@@ -56,6 +56,11 @@ Function HttpRequest(url As String) as Object
     obj.GetToStringWithTimeout      = http_get_to_string_with_timeout
     obj.PostFromStringWithTimeout   = http_post_from_string_with_timeout
 
+    if Instr(0, url, "https") = 1 then
+        obj.Http.SetCertificatesFile("common:/certs/ca-bundle.crt")
+        obj.Http.InitClientCertificates()
+    end if
+
     if Instr(1, url, "?") > 0 then
         r = CreateObject("roRegex", "&", "")
         obj.CountParams = r.Split(url).Count()
