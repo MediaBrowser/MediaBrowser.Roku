@@ -864,9 +864,11 @@ Function getShortDescriptionLine2(i as Object, mode as String) as String
 
 		if i.ProductionYear <> invalid then return tostr(i.ProductionYear)
 
+	else if i.Type = "CollectionFolder" Then
+		return i.CollectionType
+	else
+		return i.Type
 	end If
-
-	return ""
 
 End Function
 
