@@ -863,7 +863,8 @@ Function getShortDescriptionLine2(i as Object, mode as String) as String
 	else if i.MediaType = "Video" Then
 
 		if i.ProductionYear <> invalid then return tostr(i.ProductionYear)
-
+	else if i.Type = "CollectionFolder" Then
+		return tostr(i.CollectionType)
 	end If
 
 	return ""
