@@ -142,7 +142,7 @@ Function getCodecProfiles()
 	h264Conditions.push({
 		Condition: "LessThanEqual"
 		Property: "VideoLevel"
-		Value: "41"
+		Value: "51"
 		IsRequired: false
 	})
 	if playsAnamorphic = false Then
