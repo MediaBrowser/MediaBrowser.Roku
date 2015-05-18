@@ -864,9 +864,20 @@ Function getShortDescriptionLine2(i as Object, mode as String) as String
 
 		if i.ProductionYear <> invalid then return tostr(i.ProductionYear)
 
+	else if i.Type = "CollectionFolder" Then
+
+		if i.CollectionType <> invalid And i.CollectionType <> "" then return tostr(i.CollectionType)
+
+	else if i.Type = "Audio" Then
+
+		if i.Artists <> invalid AND i.Artists[0] <> invalid
+			return tostr(i.Artists[0])
+		else
+			return "UNKNOWN ARTIST"
+		end if
 	end If
 
-	return ""
+	return i.Type
 
 End Function
 
