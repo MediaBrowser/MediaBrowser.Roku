@@ -278,9 +278,9 @@ End Sub
 
 Sub audioPlayerSetContext(context, contextIndex, screen, startPlayer)
 
-    context = normalizeAudioItems(context)
+    'context = normalizeAudioItems(context)
 
-	if startPlayer then
+    if startPlayer then
         m.IgnoreTimelines = true
         m.Stop()
     end if
