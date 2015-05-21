@@ -328,7 +328,9 @@ Function musicGetSongsForItem(item) As Object
 
 	for each a in albums	
 		aData = MusicMetadata.GetAlbumSongs(a.Id)
-		songs.Append(aData.Items)
+		if aData <> Invalid Then
+			songs.Append(aData.Items)
+		end if
 	end for	
 		
 	return songs	
