@@ -1687,17 +1687,22 @@ Sub vcUpdateScreenProperties(screen)
     else if screenType = "roSearchScreen" then
         if enableBreadcrumbs then
             screen.Screen.SetBreadcrumbText(bread1, bread2)
-        end if
+        end if	
     else if screenType = "roListScreen" then
-	
-		' SetBreadcrumbText is not available on legacy devices
-		if bread2 <> invalid then screen.Screen.SetTitle(bread2)
-		
+        if bread2 <> invalid
+            ' SetBreadcrumbText is not available on legacy devices
+            if firstOf(getGlobalVar("rokuModelNumber"), 0).toInt() < 31 
+                screen.Screen.SetTitle(bread2)
+            else
+                screen.Screen.SetBreadcrumbText(bread2,"")
+            end if
+        end if
     else if screenType = "roListScreen" OR screenType = "roKeyboardScreen" OR screenType = "roParagraphScreen" then
         if enableBreadcrumbs then
             screen.Screen.SetTitle(bread2)
         end if
     else
+
         Debug("Not sure what to do with breadcrumbs on screen type: " + tostr(screenType))
     end if
 End Sub
