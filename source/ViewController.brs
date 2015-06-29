@@ -1688,14 +1688,11 @@ Sub vcUpdateScreenProperties(screen)
         if enableBreadcrumbs then
             screen.Screen.SetBreadcrumbText(bread1, bread2)
         end if
-    else if screenType = "roListScreen" then
-	
-		' SetBreadcrumbText is not available on legacy devices
-		if bread2 <> invalid then screen.Screen.SetTitle(bread2)
-		
     else if screenType = "roListScreen" OR screenType = "roKeyboardScreen" OR screenType = "roParagraphScreen" then
         if enableBreadcrumbs then
-            screen.Screen.SetTitle(bread2)
+            if bread2 <> invalid
+		screen.Screen.SetBreadcrumbText(bread2,"")
+	    end if
         end if
     else
         Debug("Not sure what to do with breadcrumbs on screen type: " + tostr(screenType))
