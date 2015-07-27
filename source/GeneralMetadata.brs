@@ -757,15 +757,22 @@ function getShortDescriptionLine1(i as Object, mode as String) as String
 End Function
 
 Function getShortDescriptionLine2(i as Object, mode as String) as String
+	if i.Type = "MusicAlbum" Then
 
-	if i.Type = "MusicArtist" or i.Type = "MusicAlbum" Then
+		albumLine = ""
+		if i.ProductionYear <> invalid and i.ProductionYear <> 0 then albumLine = albumLine + tostr(i.ProductionYear) + " / "
+		if i.RecursiveItemCount <> invalid then albumLine = albumLine + Pluralize(i.RecursiveItemCount, "Song")
+		if i.Artists <> invalid and i.Artists[0] <> invalid then albumLine = albumLine + " / " + Pluralize(i.Artists.Count(), "Artist")
+		return albumLine
 
-		if i.RecursiveItemCount <> invalid then return Pluralize(i.RecursiveItemCount, "song")
+	else if i.Type = "MusicArtist"  Then
+
+		if i.TotalCount <> invalid then return Pluralize(i.TotalCount, "Album")
 
 	else if i.Type = "MusicGenre" Then
 
-		if i.SongCount <> invalid then return Pluralize(i.SongCount, "song")
-		if i.ChildCount <> invalid then return Pluralize(i.ChildCount, "song")
+		if i.SongCount <> invalid then return Pluralize(i.SongCount, "Song")
+		if i.ChildCount <> invalid then return Pluralize(i.ChildCount, "Song")
 
 	else if i.Type = "Genre" Then
 
@@ -774,7 +781,7 @@ Function getShortDescriptionLine2(i as Object, mode as String) as String
 
 	else if i.Type = "BoxSet" Then
 
-		if i.ChildCount <> invalid then return Pluralize(i.ChildCount, "movie")
+		if i.ChildCount <> invalid then return Pluralize(i.ChildCount, "Movie")
 
 	else if i.Type = "Episode" and mode = "episodedetails" Then
 
@@ -816,8 +823,11 @@ Function getShortDescriptionLine2(i as Object, mode as String) as String
 	else if i.Type = "Episode" Then
 
 		text = ""
-
-		if i.ParentIndexNumber <> invalid then text = "S" + tostr(i.ParentIndexNumber) + ", "
+		if i.RunTimeTicks <> "" And i.RunTimeTicks <> invalid
+            		textTime = formatTime(Int(((i.RunTimeTicks).ToFloat() / 10000) / 1000))
+			text = text + textTime
+		end if
+		if i.ParentIndexNumber <> invalid then text = text + " / S" + tostr(i.ParentIndexNumber) + ", "
 
 		if i.IndexNumber <> invalid then text = text + "E" + tostr(i.IndexNumber)
 
@@ -860,13 +870,56 @@ Function getShortDescriptionLine2(i as Object, mode as String) as String
 
         return programTime
 
+	else if i.Type = "CollectionFolder" or i.Type = "PlaylistsFolder" or i.Type = "Playlist" Then
+
+		collectionLine = ""
+		if i.Type = "CollectionFolder" Then
+			if i.CollectionType <> invalid And i.CollectionType <> "" then collectionLine = collectionLine + Ucase(left(tostr(i.CollectionType),1)) + right(tostr(i.CollectionType),len(tostr(i.CollectionType))-1)
+		else collectionLine = "Playlist"
+		end if
+		if i.ChildCount <> invalid then collectionLine = collectionLine + " / " + Pluralize(i.ChildCount, "Item")
+		return collectionLine
+
 	else if i.MediaType = "Video" Then
 
-		if i.ProductionYear <> invalid then return tostr(i.ProductionYear)
+		videoLine = ""
+		if i.RunTimeTicks <> "" And i.RunTimeTicks <> invalid
+            		textTime = formatTime(Int(((i.RunTimeTicks).ToFloat() / 10000) / 1000))
+			videoLine = videoLine + textTime
+		end if
+		if i.ProductionYear <> invalid then videoLine = videoLine + " / " + tostr(i.ProductionYear)
+        	if i.IsHD <> invalid
+            		if i.IsHD then videoLine = videoLine + " / HD" 
+        	end if
+		return videoLine
 
+	else if i.Type = "Audio" Then
+
+		if i.Artists <> invalid AND i.Artists[0] <> invalid
+			return tostr(i.Artists[0])
+		else
+			return "UNKNOWN ARTIST"
+		end if
+
+	else if i.type = "Video" or i.type = "MusicVideo" Then
+
+		videoLine = ""
+		if i.Duration <> invalid then videoLine = VideoLine + tostr(i.Duration)
+        	if i.IsHD <> invalid
+            		if i.IsHD then videoLine = videoLine + " | HD" 
+        	end if
+		if i.StreamFormat <> invalid then videoLine = videoLine + " / " + tostr(i.StreamFormat)
+		return videoLine
+	else if i.type = "Folder" then
+
+		collectionLine = "Folder"
+		if i.CollectionType <> invalid And i.CollectionType <> "" then collectionLine = collectionLine + " / " + Ucase(left(tostr(i.CollectionType),1)) + right(tostr(i.CollectionType),len(tostr(i.CollectionType))-1)
+		if i.ChildCount <> invalid then collectionLine = collectionLine + " / " + Pluralize(i.ChildCount, "Item")
+		return collectionLine
+	
 	end If
 
-	return ""
+	return i.Type
 
 End Function
 
