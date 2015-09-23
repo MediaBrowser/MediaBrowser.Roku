@@ -55,7 +55,8 @@ Function handlePreferencesScreenMessage(msg) as Boolean
 					GetPreferenceEnhancedImages,
 					GetPreferenceMediaIndicators,
 					GetPreferenceShowClock,
-                    GetPreferenceTimeFormat
+                    GetPreferenceTimeFormat,
+                    GetPreferenceSlideshow
 				]
 
 				if (prefType = "custom") then
@@ -341,6 +342,17 @@ Function GetPreferenceList() as Object
             ContentType: "pref",
             PrefType: "list",
             ShortDescriptionLine1: "Select 12h or 24h time format.",
+            HDBackgroundImageUrl: viewController.getThemeImageUrl("hd-preferences-lg.png"),
+            SDBackgroundImageUrl: viewController.getThemeImageUrl("sd-preferences-lg.png")
+        },
+        {
+            Title: "Slideshow Overlay: " + GetSelectedPreference(GetPreferenceSlideshow(), firstOf(RegRead("slideshow_overlay"), "2500")),
+            ShortTitle: "Slideshow Overlay",
+            ID: "slideshow_overlay",
+            ContentType: "pref",
+			PrefType: "list",
+            ShortDescriptionLine1: "How many seconds to show the overlay during slideshow?",
+            ShortDescriptionLine2: "Choosing 0 disables the overlay.",
             HDBackgroundImageUrl: viewController.getThemeImageUrl("hd-preferences-lg.png"),
             SDBackgroundImageUrl: viewController.getThemeImageUrl("sd-preferences-lg.png")
         }
@@ -639,6 +651,38 @@ Function GetPreferenceTimeFormat() as Object
         {
             Title: "24h",
             Id: "24h",
+            IsDefault: false
+        }
+    ]
+
+    return prefOptions
+End Function
+
+Function GetPreferenceSlideshow() as Object
+    prefOptions = [
+        {
+            Title: "0 (Never Show)",
+            Id: "0",
+            IsDefault: false
+        },
+        {
+            Title: "1 second",
+            Id: "1000",
+            IsDefault: false
+        },
+        {
+            Title: "2 second",
+            Id: "2000",
+            IsDefault: false
+        },
+        {
+            Title: "2.5 second [default]",
+            Id: "2500",
+            IsDefault: true
+        },
+        {
+            Title: "5 second",
+            Id: "5000",
             IsDefault: false
         }
     ]
