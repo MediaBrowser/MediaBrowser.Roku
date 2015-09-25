@@ -55,7 +55,9 @@ Function handlePreferencesScreenMessage(msg) as Boolean
 					GetPreferenceEnhancedImages,
 					GetPreferenceMediaIndicators,
 					GetPreferenceShowClock,
-                    GetPreferenceTimeFormat
+					GetPreferenceTimeFormat,
+					GetPreferenceSlideOver,
+					GetPreferenceSlideDuration
 				]
 
 				if (prefType = "custom") then
@@ -341,6 +343,28 @@ Function GetPreferenceList() as Object
             ContentType: "pref",
             PrefType: "list",
             ShortDescriptionLine1: "Select 12h or 24h time format.",
+            HDBackgroundImageUrl: viewController.getThemeImageUrl("hd-preferences-lg.png"),
+            SDBackgroundImageUrl: viewController.getThemeImageUrl("sd-preferences-lg.png")
+        },
+        {
+            Title: "Slideshow Overlay: " + GetSelectedPreference(GetPreferenceSlideOver(), firstOf(RegRead("slideshow_overlay"), "2500")),
+            ShortTitle: "Slideshow Overlay",
+            ID: "slideshow_overlay",
+            ContentType: "pref",
+			PrefType: "list",
+            ShortDescriptionLine1: "How many seconds to show the overlay during a slideshow?",
+            ShortDescriptionLine2: "Choosing 0 disables the overlay.",
+            HDBackgroundImageUrl: viewController.getThemeImageUrl("hd-preferences-lg.png"),
+            SDBackgroundImageUrl: viewController.getThemeImageUrl("sd-preferences-lg.png")
+        },
+        {
+            Title: "Slideshow Duration: " + GetSelectedPreference(GetPreferenceSlideDuration(), firstOf(RegRead("slideshow_duration"), "6")),
+            ShortTitle: "Slideshow Duration",
+            ID: "slideshow_duration",
+            ContentType: "pref",
+			PrefType: "list",
+            ShortDescriptionLine1: "How many seconds to show each slide during a slideshow?",
+            ShortDescriptionLine2: "Lower is faster, Higher is slower.",
             HDBackgroundImageUrl: viewController.getThemeImageUrl("hd-preferences-lg.png"),
             SDBackgroundImageUrl: viewController.getThemeImageUrl("sd-preferences-lg.png")
         }
@@ -639,6 +663,79 @@ Function GetPreferenceTimeFormat() as Object
         {
             Title: "24h",
             Id: "24h",
+            IsDefault: false
+        }
+    ]
+
+    return prefOptions
+End Function
+Function GetPreferenceSlideOver() as Object
+    prefOptions = [
+        {
+            Title: "0 (Never Show)",
+            Id: "0",
+            IsDefault: false
+        },
+        {
+            Title: "1 second",
+            Id: "1000",
+            IsDefault: false
+        },
+        {
+            Title: "2 seconds",
+            Id: "2000",
+            IsDefault: false
+        },
+        {
+            Title: "2.5 seconds [default]",
+            Id: "2500",
+            IsDefault: true
+        },
+        {
+            Title: "5 seconds",
+            Id: "5000",
+            IsDefault: false
+        }
+    ]
+
+    return prefOptions
+End Function
+
+Function GetPreferenceSlideDuration() as Object
+    prefOptions = [
+        {
+            Title: "20 seconds",
+            Id: "20",
+            IsDefault: false
+        },
+        {
+            Title: "15 seconds",
+            Id: "15",
+            IsDefault: false
+        },
+        {
+            Title: "10 seconds",
+            Id: "10",
+            IsDefault: false
+        },
+        {
+            Title: "8 seconds",
+            Id: "8",
+            IsDefault: false
+        },
+        {
+            Title: "6 seconds [default]",
+            Id: "6",
+            IsDefault: true
+        },
+        {
+            Title: "4 seconds",
+            Id: "4",
+            IsDefault: false
+        },
+        {
+            Title: "2 seconds",
+            Id: "2",
             IsDefault: false
         }
     ]
