@@ -52,16 +52,29 @@ End Function
 '** deleteLiveTvRecording
 '**********************************************************
 
-Function deleteLiveTvRecording(recordingId As String) As Boolean
+Function deleteLiveTvRecording(ContentType As String, ItemId As String) As Boolean
 
-    url = GetServerBaseUrl() + "/LiveTv/Recordings/" + HttpEncode(recordingId)
+    loadingDialog = CreateObject("roOneLineDialog")
+    loadingDialog.SetTitle("Deleting item...")
+    loadingDialog.ShowBusyAnimation()
+    loadingDialog.Show()
 
+    if ContentType = "Recording" then
+    	url = GetServerBaseUrl() + "/LiveTv/Recordings/" + HttpEncode(ItemId)
+    else
+    	url = GetServerBaseUrl() + "/Items/" + HttpEncode(ItemId)
+    end if
     request = HttpRequest(url)
     request.AddAuthorization()
     request.SetRequest("DELETE")
 
     response = request.PostFromStringWithTimeout("", 5)
-	
+    loadingDialog.Close()
+    if response <> invalid then
+        createDialog("Success", "Item was deleted successfully.", "OK", true)
+    else
+        createDialog("Error", "Error occured. Item was not deleted.", "OK", true)
+    end if
     return response <> invalid
 	
 End Function
