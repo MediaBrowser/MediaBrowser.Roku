@@ -755,7 +755,7 @@ End Function
 
 Sub springboardDeleteRecording (item)
 	if showDeleteRecordingDialog() = "1" then
-        deleteLiveTvRecording(item.Id)
+        	deleteLiveTvRecording(item.ContentType, item.Id)
 		m.Screen.Close()
 	end if
 End Sub
