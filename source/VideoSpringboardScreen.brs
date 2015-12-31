@@ -537,6 +537,10 @@ Sub springboardShowMoreDialog(item)
         dlg.SetButton("specials", "Special features")
     end if
 
+    if item.CanDelete = true then
+        dlg.SetButton("delete", "Delete")
+    end if
+
 	dlg.item = item
 	dlg.parentScreen = m
 
@@ -574,6 +578,18 @@ Function handleMoreOptionsButton(command, data) As Boolean
 		newScreen.ScreenName = "Chapters" + itemId
         m.ViewController.InitializeOtherScreen(newScreen, [item.Title, "Special Features"])
 		newScreen.Show()
+        return true
+    else if command = "delete" then
+        deleteDialog = createDeleteItemConfirmationDialog(itemId)
+        deleteDialog.show(true)
+        deletedSuccessfully = deleteDialog.ItemDeletedSuccessfully
+        if deletedSuccessfully then
+          ' Item was deleted successfully, so let's pop out of the detail view
+          ' TODO(jpr): figure out how to refresh TV episode list upon successful
+          ' deletion via the 'more' delete menu (as opposed to the options menu)
+          m.screen.close()
+          m.viewcontroller.popscreen(screen)
+        end if
         return true
     else if command = "cast" then
         newScreen = createPeopleScreen(m.ViewController, item)

@@ -251,6 +251,16 @@ Sub posterSeriesOptionsDialog()
 
 	dlg.SetButton("cast", "Cast & Crew")
 
+    ' TODO(jpr): should we also give option to delete the entire series/season?
+    status = m.contentArray[m.focusedList]
+    itemToDelete = status.content[status.focusedIndex]
+    ' TODO(jpr): there is a UI bug that shows a season to the user even if
+    ' there are no episodes in it. In this case, we won't have a valid item.
+    if itemToDelete <> invalid and itemToDelete.CanDelete = true then
+        dlg.itemToDelete = itemToDelete
+        dlg.SetButton("delete", "Delete item")
+    end if
+
 	dlg.item = m.Item
 	dlg.parentScreen = m
 
@@ -278,10 +288,19 @@ Function handleSeriesOptionsButton(command, data) As Boolean
         m.ViewController.InitializeOtherScreen(newScreen, [item.Title, "Cast & Crew"])
 		newScreen.Show()
         return true
-    else if command = "close" then
+  else if command = "delete" then
+    deleteDialog = createDeleteItemConfirmationDialog(m.itemToDelete.id)
+    deleteDialog.show(true)
+    deletedSuccessfully = deleteDialog.ItemDeletedSuccessfully
+    if deletedSuccessfully then
+      ' Item was deleted successfully, so let's reload the list
+      screen.Show()
+    end if
+    return true
+  else if command = "close" then
 		m.Screen.Close()
         return true
-    end if
+  end if
 	
     return false
 

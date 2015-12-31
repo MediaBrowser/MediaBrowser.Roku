@@ -168,6 +168,83 @@ Function showContextViewMenuYesNoDialog(title As String, text = "" as String)
 End Function
 
 '******************************************************
+' Create Delete dialog
+'******************************************************
+
+' Given an id for an item, confirm with the user if they would like to delete the
+' item from their library. If they choose to do so, we submit a DELETE request
+' to the server, wait for a response, then present a message to the user informing
+' them on the success/failure of the delete.
+'
+' After Show()-ing the dialog, the ItemDeletedSuccessfully key will be  set to
+' true IFF a user confirmed the deletion and actually succeeded according to the
+' response from the server.
+Function createDeleteItemConfirmationDialog(itemId) as Object
+
+    dlg = createBaseDialog()
+    dlg.itemId = itemId
+
+    dlg.Title = "Delete Item"
+    dlg.Text = "Deleting this item will delete it from both the file system and your media library." + chr(10) + chr(10) + "Are you sure you wish to continue?"
+    dlg.SetButton("delete", "Delete")
+    dlg.SetButton("cancel", "Cancel")
+    dlg.HandleButton = handleDeleteItemButton
+
+    return dlg
+
+End Function
+
+sub handleDeleteItemButton(command, data) As Boolean
+
+    m.ItemDeletedSuccessfully = false
+    if command = "delete" then
+        loadingDialog = CreateObject("roOneLineDialog")
+        loadingDialog.SetTitle("Deleting...")
+        loadingDialog.ShowBusyAnimation()
+        loadingDialog.Show()
+
+        result = doDeleteItem(m.itemId)
+        if result = true then
+          m.ItemDeletedSuccessfully = true
+        end if
+
+        loadingDialog.Close()
+
+        showResultOfDeleteToUser(result)
+        return true
+    else if command = "cancel" then
+        m.Screen.Close()
+        return true
+    end if
+    
+    return false
+
+End sub
+
+sub doDeleteItem(itemId As String) As Boolean
+
+    url = GetServerBaseUrl() + "/Items/" + HttpEncode(itemId)
+
+    request = HttpRequest(url)
+    request.AddAuthorization()
+    request.SetRequest("DELETE")
+
+    response = request.PostFromStringWithTimeout("", 5)
+	
+    return response <> invalid
+	
+End sub
+
+sub showResultOfDeleteToUser(deleteWasSuccessful)
+    if deleteWasSuccessful = true then
+        createDialog("Success", "Item was deleted successfully.", "OK", true)
+    else
+        ' TODO(jpr): better error message? e.g. notifying about specific errors
+        createDialog("Error", "Issues encountered while deleting item.", "OK", true)
+    end if
+End sub
+
+'******************************************************
 ' Create Dialog Box
 '******************************************************
 

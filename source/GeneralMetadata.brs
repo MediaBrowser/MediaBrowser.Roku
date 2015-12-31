@@ -206,6 +206,7 @@ Function getMetadataFromServerItem(i as Object, imageType as Integer, primaryIma
 	metaData.MediaSources = i.MediaSources
 	metaData.People = i.People
 	metaData.CollectionType = i.CollectionType
+	metaData.CanDelete = i.CanDelete
 	
 	metaData.ChannelId = i.ChannelId
 	metaData.StartDate = i.StartDate

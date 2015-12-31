@@ -95,7 +95,7 @@ Function getTvLibraryRowScreenUrl(row as Integer, id as String) as String
 		url = url  + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?recursive=true"
 
 		query.AddReplace("IncludeItemTypes", "Series")
-		query.AddReplace("fields", "Overview")
+		query.AddReplace("fields", "Overview,CanDelete")
 		query.AddReplace("ParentId", m.parentId)
 		query.AddReplace("ImageTypeLimit", "1")
 		
@@ -127,7 +127,7 @@ Function getTvLibraryRowScreenUrl(row as Integer, id as String) as String
 		
 	else if row = 2
 		' Tv next up
-		url = url  + "/Shows/NextUp?fields=Overview"
+		url = url  + "/Shows/NextUp?fields=Overview,CanDelete"
 
 		query.AddReplace("userid", getGlobalVar("user").Id)
 		query.AddReplace("SortBy", "SortName")
@@ -215,7 +215,7 @@ Function getTvSeasonUrl(row as Integer, seasonId as String) as String
 	userId = getGlobalVar("user").Id
 
 	url = url + "&userId=" + userId
-	url = url + "&fields=PrimaryImageAspectRatio,Overview"
+	url = url + "&fields=PrimaryImageAspectRatio,Overview,CanDelete"
 
 	return url
 
@@ -299,7 +299,7 @@ Function getTvGenreScreenUrl(row as Integer, id as String) as String
     ' Query
     query = {
         IncludeItemTypes: "Series"
-        fields: "Overview"
+        fields: "Overview,CanDelete"
         sortby: "SortName"
         sortorder: "Ascending",
 		genres: genre,
@@ -360,7 +360,7 @@ Function getTvAlphabetScreenUrl(row as Integer, id as String) as String
     ' Query
     query = {
         IncludeItemTypes: "Series"
-        fields: "Overview"
+        fields: "Overview,CanDelete"
         sortby: "SortName"
         sortorder: "Ascending",
 		ImageTypeLimit: "1"
