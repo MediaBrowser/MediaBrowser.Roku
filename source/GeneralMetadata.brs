@@ -496,11 +496,15 @@ Function getMetadataFromServerItem(i as Object, imageType as Integer, primaryIma
             end if
         end if
 
-        ' Use Actors Area for Series / Season / Episode
-        metaData.Actors = episodeInfo
-
+            ' Use Actors Area for Series / Season / Episode
+            metaData.Actors = episodeInfo
+            ' Use Genre/Categories Area for Network and airtime
+	    metaData.Categories = CreateObject("roArray", 3, true)
+	    metadata.Categories.Push(i.SeriesStudio)
+	    metadata.Categories.Push(i.AirTime)
 	else
-		FillActorsFromItem(metaData, i)
+            FillActorsFromItem(metaData, i)
+            FillCategoriesFromGenres(metaData, i)
 	end if
 	
 	FillChaptersFromItem(metaData, i)
