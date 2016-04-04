@@ -10,10 +10,10 @@
 
 Function createFilmographyScreen(viewController as Object, item as Object) As Object
 
-    imageType      = (firstOf(RegUserRead("movieImageType"), "0")).ToInt()
+    imageType      = (firstOf(RegUserRead("filmImageType"), "0")).ToInt()
 
-	names = ["Movies", "Television"]
-	keys = ["0", "1"]
+	names = ["Movies", "Shows", "Episodes", "Music Videos", "Videos"]
+	keys = ["0", "1", "2", "3", "4"]
 
 	loader = CreateObject("roAssociativeArray")
 	loader.getUrl = getFilmographyRowScreenUrl
@@ -29,9 +29,7 @@ Function createFilmographyScreen(viewController as Object, item as Object) As Ob
 	screen.baseActivate = screen.Activate
 	screen.Activate = filmographyScreenActivate
 
-	screen.recreateOnActivate = true
-
-    screen.displayDescription = (firstOf(RegUserRead("movieDescription"), "1")).ToInt()
+    screen.displayDescription = (firstOf(RegUserRead("filmDescription"), "1")).ToInt()
 
 	screen.createContextMenu = movieScreenCreateContextMenu
 
@@ -41,8 +39,8 @@ End Function
 
 Sub filmographyScreenActivate(priorScreen)
 
-    imageType      = (firstOf(RegUserRead("movieImageType"), "0")).ToInt()
-	displayDescription = (firstOf(RegUserRead("movieDescription"), "1")).ToInt()
+    imageType      = (firstOf(RegUserRead("filmImageType"), "0")).ToInt()
+	displayDescription = (firstOf(RegUserRead("filmDescription"), "1")).ToInt()
 	
     if imageType = 0 then
 		gridStyle = "mixed-aspect-ratio"
@@ -64,9 +62,9 @@ End Sub
 
 Function getFilmographyRowScreenUrl(row as Integer, id as String) as String
 
-    filterBy       = (firstOf(RegUserRead("movieFilterBy"), "0")).ToInt()
-    sortBy         = (firstOf(RegUserRead("movieSortBy"), "0")).ToInt()
-    sortOrder      = (firstOf(RegUserRead("movieSortOrder"), "0")).ToInt()
+    filterBy       = (firstOf(RegUserRead("filmFilterBy"), "0")).ToInt()
+    sortBy         = (firstOf(RegUserRead("filmSortBy"), "0")).ToInt()
+    sortOrder      = (firstOf(RegUserRead("filmSortOrder"), "0")).ToInt()
 
     url = GetServerBaseUrl()
 
@@ -96,8 +94,16 @@ Function getFilmographyRowScreenUrl(row as Integer, id as String) as String
 
 	if row = 0 then
 		query.AddReplace("IncludeItemTypes", "Movie")
-	else   'if row = 1
+	else if row = 1
 		query.AddReplace("IncludeItemTypes", "Series")
+	else if row = 2
+		query.AddReplace("IncludeItemTypes", "Episode")
+	else if row = 3
+		query.AddReplace("IncludeItemTypes", "MusicVideo")
+	else 
+		query.AddReplace("IncludeItemTypes", "Video")
+		query.AddReplace("ExcludeItemTypes", "Movie,Series,Episode,MusicVideo")
+		
 	end if
 	
 	query.AddReplace("Fields", "Overview")
@@ -113,9 +119,10 @@ End Function
 
 Function parseFilmographyScreenResult(row as Integer, id as string, startIndex as Integer, json as String) as Object
 
-	imageType      = (firstOf(RegUserRead("movieImageType"), "0")).ToInt()
+	imageType      = (firstOf(RegUserRead("filmImageType"), "0")).ToInt()
 	primaryImageStyle = "mixed-aspect-ratio-portrait"
 	mode = ""
+	if row > 1 then mode = "seriesimageasprimary"
 
     return parseItemsResponse(json, imageType, primaryImageStyle, mode)
 
@@ -124,7 +131,7 @@ End Function
 Function filmographyScreenCreateContextMenu()
 	
 	options = {
-		settingsPrefix: "movie"
+		settingsPrefix: "film"
 		sortOptions: ["Name", "Date Added", "Date Played", "Release Date"]
 		filterOptions: ["None", "Unplayed", "Played"]
 		showSortOrder: true

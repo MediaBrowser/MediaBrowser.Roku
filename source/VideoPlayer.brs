@@ -22,14 +22,12 @@ Function getPlayConfiguration(context, contextIndex, playOptions)
 		
         if intros <> invalid
 		
-            for each i in intros.Items	
-			'for each i in intros	
-
-				i.PlayOptions = {}
-				list.push(i)
-            end for
+		for each i in intros.Items		
+			i.PlayOptions = {}
+			list.push(i)
+		end for
 			
-        end if
+	end if
 
     end if
 
@@ -39,6 +37,17 @@ Function getPlayConfiguration(context, contextIndex, playOptions)
 		currentIndex = currentIndex + 1
 	end for
 	
+        additional = getAdditionalParts(initialItem.Id)
+
+        if additional <> invalid
+		
+		for each i in additional.Items		
+			i.PlayOptions = {}
+			list.push(i)
+		end for
+			
+	end if
+
 	return {
 		Context: list
 		CurIndex: 0
@@ -116,7 +125,7 @@ Sub videoPlayerShow()
     ' a shot.
 
     if m.playbackError then
-	
+	createDialog("Playback Error!", "Error while playing video, nothing left to fall back to.", "OK", true)
         Debug("Error while playing video, nothing left to fall back to")
         m.ShowPlaybackError("")
         m.Screen = invalid
@@ -178,6 +187,7 @@ Function videoPlayerCreateVideoPlayer(item, playOptions)
     videoItem = m.ConstructVideoItem(item, playOptions)
 
 	if videoItem = invalid or videoItem.Stream = invalid then
+		createDialog("Playback Error!", "No videoItem or VideoItem.Stream found. (invalid)", "OK", true)
 		return invalid
 	end if
 
@@ -254,11 +264,13 @@ Function IsBifServiceAvailable(item)
 		viewController.serverPlugins[item.ServerId] = getInstalledPlugins()
 	end if
 	
-	for each serverPlugin in viewController.serverPlugins[item.ServerId]
-		if serverPlugin.Name = "Roku Thumbnails" then
-			return true
-		end if
-	end for
+	if viewController.serverPlugins[item.ServerId] <> invalid then
+		for each serverPlugin in viewController.serverPlugins[item.ServerId]
+			if serverPlugin.Name = "Roku Thumbnails" then
+				return true
+			end if
+		end for
+	end if
 	
 	return false
 	
@@ -292,6 +304,18 @@ Function videoPlayerHandleMessage(msg) As Boolean
             m.progressTimer.Active = false
             m.playState = "stopped"
             Debug("MediaPlayer::playVideo::VideoScreenEvent::isScreenClosed: position -> " + tostr(m.lastPosition))
+	    if m.lastPosition = 0
+			t = FirstOf(regRead("prefPlayMethod"),"Auto")
+			if t = "DirectPlay" then
+				createDialog("Playback Error!", "The Video Player has closed prematurely. Your play method is Force DirectPlay. Forcing DirectPlay is NOT supported on the roku at this time."+chr(10)+chr(10)+"Change your play method to FORCE DIRECTSTREAM or one of the USE AUTO DETECTION choices. Sorry."+chr(10), "OK", true)
+			else if left(t,4) = "Auto" then
+				createDialog("Playback Error!", "The Video Player has closed prematurely. Your play method is Use Auto Detection. This error can be caused by a corrupt video stream, or a corrupt item in your library."+chr(10)+chr(10)+"If you are sure the item is not corrupt then please report this video on emby forums so that we can help diagnose your playback error. Thank you and apologies for the issue."+chr(10), "OK", true)
+			else if t = "DirectStream" then
+				createDialog("Playback Error!", "The Video Player has closed prematurely. Your play method is Force DirectStream. Change the play method to one of the USE AUTO DETECTION choices and try again."+chr(10), "OK", true)
+			else
+				createDialog("Playback Error!", "The Video Player has closed prematurely. Your play method is Force Transcoding. Change the play method to one of the USE AUTO DETECTION choices and try again."+chr(10), "OK", true)
+			end if
+	    end if
             NowPlayingManager().location = "navigation"
 
 			m.ReportPlayback("stop")
@@ -560,16 +584,62 @@ Sub DisplayTranscodingInfo(screen, item, sessions)
 				item.ReleaseDate = item.ReleaseDate + " ("
 
 				if transcodingInfo.Width <> invalid and transcodingInfo.Height <> invalid then  item.ReleaseDate = item.ReleaseDate + tostr(transcodingInfo.Width) + "x" + tostr(transcodingInfo.Height)
-				if transcodingInfo.AudioChannels <> invalid then item.ReleaseDate = item.ReleaseDate + " " + tostr(transcodingInfo.AudioChannels) + "ch"
+
+				shown = false
+				if item.StreamInfo <> invalid then
+					serverStreamInfo = item.StreamInfo
+	   				audioStream = serverStreamInfo.AudioStream
+					channels = audioStream.Channels
+
+					' stream defined audio channels
+       					if channels <> invalid then
+          					if channels = 8 then
+               						audioCh = "7.1"
+           					else if channels = 6 then
+               						audioCh = "5.1"
+           					else
+              						audioCh = tostr(channels)
+           					end if
+						item.ReleaseDate = item.ReleaseDate + " " + tostr(audioCh) + "ch"
+						shown = true
+       					end if
+				end if
+
+				' transcoded audio channels
+       				if transcodingInfo.AudioChannels <> invalid then
+          				if transcodingInfo.AudioChannels = 8 then
+               					audioCh = "7.1"
+           				else if transcodingInfo.AudioChannels = 6 then
+               					audioCh = "5.1"
+           				else
+              					audioCh = tostr(transcodingInfo.AudioChannels)
+           				end if
+					item.ReleaseDate = item.ReleaseDate
+					if shown then
+						item.ReleaseDate = item.ReleaseDate +"->" + tostr(audioCh) + "ch"
+					else
+						item.ReleaseDate = item.ReleaseDate +" " + tostr(audioCh)
+					end if
+       				end if
 				item.ReleaseDate = item.ReleaseDate + ")"
 			end if
 
 			item.ReleaseDate = item.ReleaseDate + chr(10)
 
-			item.length = tostr(item.Length)
+			item.length = tostr(item.Length)	
+			vc = "?" : ac = "?"
+			if m.Codecs <> invalid
+				r = CreateObject("roRegex","(.*)/(.*)/(.*)","")
+				match = r.match(m.Codecs)
+				if match.count() > 0 then
+					junk = match[1]
+					vc = LCase(match[2])
+					ac = LCase(match[3])
+				end if
+			end if
 
-			if transcodingInfo.VideoCodec <> invalid then item.ReleaseDate = item.ReleaseDate + "    video: " + tostr(transcodingInfo.VideoCodec)
-			if transcodingInfo.AudioCodec <> invalid then item.ReleaseDate = item.ReleaseDate + "    audio: " + tostr(transcodingInfo.AudioCodec)
+			if transcodingInfo.VideoCodec <> invalid then item.ReleaseDate = item.ReleaseDate + "    video: " + vc + "->" + tostr(transcodingInfo.VideoCodec)
+			if transcodingInfo.AudioCodec <> invalid then item.ReleaseDate = item.ReleaseDate + "    audio: " + ac + "->" + tostr(transcodingInfo.AudioCodec)
 
 			screen.SetContent(item)
 
@@ -621,7 +691,9 @@ Function videoPlayerConstructVideoItem(item, options) as Object
 	   audioStream = serverStreamInfo.AudioStream
 
        if audioStream <> invalid and audioStream.Channels <> invalid then
-           if (audioStream.Channels = 6) then
+           if audioStream.Channels = 8 then
+               audioCh = "7.1"
+           else if audioStream.Channels = 6 then
                audioCh = "5.1"
            else
               audioCh = tostr(audioStream.Channels) + "ch"
@@ -669,6 +741,7 @@ Sub videoPlayerStopTranscoding()
     response = request.PostFromStringWithTimeout("", 5)
 
     if response = invalid
+	createDialog("Transcoding Error!", "Error stopping server transcoding.", "OK", true)
         Debug("Error stopping server transcoding")
     end if
 

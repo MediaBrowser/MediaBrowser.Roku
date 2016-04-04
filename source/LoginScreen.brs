@@ -2,11 +2,19 @@
 '** CreateLoginScreen
 '**********************************************************
 
-Function CreateLoginScreen(viewController as Object, serverUrl as String) as Object
+Function CreateLoginScreen(viewController as Object, serverUrl as String, screenType as Integer) as Object
 
 	' Dummy up an item
 	item = CreateObject("roAssociativeArray")
-	item.Title = "Login"
+
+	if screenType = 0
+		GetGlobalAA().AddReplace("alsowatch", "0")
+		item.Title = "Login"
+	else
+		GetGlobalAA().AddReplace("alsowatch", "1")
+		item.Title = "Also Watching"
+	end if
+
 	item.serverUrl = serverUrl
 	
     ' Show login tiles - common convention is square images
@@ -63,10 +71,28 @@ Function handleLoginScreenMessage(msg) as Boolean
 				
 				showServerListScreen(viewController)
 				
-			else if selectedProfile.ContentType = "ConnectSignIn"
+	    else if selectedProfile.ContentType = "ConnectSignIn"
 
 				viewController.createScreenForItem(content, index, ["Connect"], true)
-			
+
+            else if selectedProfile.ContentType = "Left"
+
+		GetGlobalAA().AddReplace("peeps", invalid)
+		GetGlobalAA().AddReplace("auths", invalid)
+		peepsnames = FirstOf(getGlobalvar("peepsnames"),"")
+		if peepsnames <> ""
+			sessionId = GetSessionId()
+			if sessionId <> invalid
+				r = CreateObject("roRegex", ",", "")
+				for each id in r.split(peepsnames)
+					result = postAlsoWatchingStatus(id, false, sessionId)
+				end for
+			end if
+		end if
+		createDialog("Also Watching", "All Users have been removed from your session.", "OK", true)
+		GetGlobalAA().AddReplace("peepsnames", invalid)
+		m.ViewController.PopScreen(m.ViewController.screens[m.ViewController.screens.Count() - 1])
+		m.ViewController.PopScreen(m.ViewController.screens[m.ViewController.screens.Count() - 1])
             else
 
                 'return 2
@@ -126,18 +152,55 @@ Sub onLoginScreenUserInput(value, screen)
 End Sub
 
 Sub OnPasswordEntered(serverUrl, usernameText, passwordText)
-
+	debug("m.Title = "+FirstOf(m.Title,"invalid"))
 	Debug ("OnPasswordEntered")
 
 	' Check password
 	authResult = authenticateUser(serverUrl, usernameText, passwordText)
 
 	If authResult <> invalid
+		if GetGlobalVar("alsowatch") = "1" then
+
+			' count of the users also watching
+			peepsnames = FirstOf(getGlobalvar("peepsnames"),"")
+			r = CreateObject("roRegex", authResult.User.Id, "")
+			if r.ismatch(peepsnames) 
+				createDialog("Also Watching Error!", "This user is already added to your session.", "OK", true)
+			else
+				auths = FirstOf(getGlobalvar("auths"),"0")
+				if auths <> "0"
+					auths = auths + "," + authResult.AccessToken
+				else
+					auths = authResult.AccessToken
+				end if
+    				GetGlobalAA().AddReplace("auths", tostr(auths))
+
+				sessionId = GetSessionId()
+				if sessionId <> invalid
+					result = postAlsoWatchingStatus(authResult.User.Id, true, sessionId)
+					if result then
+						createDialog("Also Watching", "This User has been added to your session.", "OK", true)
+						peeps = FirstOf(getGlobalvar("peeps"), 0)
+						peeps = peeps + 1
+    						GetGlobalAA().AddReplace("peeps", peeps)
+						if peepsnames <> ""
+							peepsnames = peepsnames + "," + authResult.User.Id
+						else
+							peepsnames = authResult.User.Id
+						end if
+						GetGlobalAA().AddReplace("peepsnames", tostr(peepsnames))
+					end if
+				end if
+			end if
+			m.ViewController.PopScreen(m.ViewController.screens[m.ViewController.screens.Count() - 1])
+			m.ViewController.PopScreen(m.ViewController.screens[m.ViewController.screens.Count() - 1])
+		else
 		
-		ConnectionManager().SetServerData(authResult.ServerId, "AccessToken", authResult.AccessToken)
-		ConnectionManager().SetServerData(authResult.ServerId, "UserId", authResult.User.Id)
+			ConnectionManager().SetServerData(authResult.ServerId, "AccessToken", authResult.AccessToken)
+			ConnectionManager().SetServerData(authResult.ServerId, "UserId", authResult.User.Id)
 		
-		GetViewController().onSignedIn(authResult.ServerId, serverUrl, authResult.User.Id)
+			GetViewController().onSignedIn(authResult.ServerId, serverUrl, authResult.User.Id)
+		end if
 	Else
 		ShowPasswordFailed()
 	End If
@@ -168,37 +231,49 @@ Function getLoginScreenDataContainer(viewController as Object, item as Object) a
     if profiles = invalid
         return invalid
     end if
-
-    ' Support manual login. 
-    manualLogin = {
-        Title: "Manual Login"
-        ContentType: "manual"
-        ShortDescriptionLine1: "Manual Login"
-        HDPosterUrl: viewController.getThemeImageUrl("hd-default-user.png"),
-        SDPosterUrl: viewController.getThemeImageUrl("hd-default-user.png")
-    }
-	profiles.Push( manualLogin )
-    
-    ' Add Server Tile (eventually move this)
-    switchServer = {
-        Title: "Select Server"
-        ContentType: "server"
-        ShortDescriptionLine1: "Select Server"
-        HDPosterUrl: viewController.getThemeImageUrl("hd-switch-server.png"),
-        SDPosterUrl: viewController.getThemeImageUrl("hd-switch-server.png")
-    }
-    profiles.Push( switchServer )
-
-	if ConnectionManager().isLoggedIntoConnect() = false then
-		' Add Server Tile (eventually move this)
-		connect = {
-			Title: "Sign in with Emby Connect"
-			ContentType: "ConnectSignIn"
-			ShortDescriptionLine1: "Sign in with Emby Connect"
-			HDPosterUrl: viewController.getThemeImageUrl("hd-connectsignin.jpg"),
-			SDPosterUrl: viewController.getThemeImageUrl("hd-connectsignin.jpg")
+	if GetGlobalVar("alsowatch") = "0" then
+		' Support manual login. 
+		manualLogin = {
+			Title: "Manual Login"
+			ContentType: "manual"
+			ShortDescriptionLine1: "Manual Login"
+			HDPosterUrl: viewController.getThemeImageUrl("hd-default-user.png"),
+			SDPosterUrl: viewController.getThemeImageUrl("hd-default-user.png")
 		}
-		profiles.Push( connect )
+		profiles.Push( manualLogin )
+    
+		' Add Server Tile (eventually move this)
+		switchServer = {
+			Title: "Select Server"
+			ContentType: "server"
+			ShortDescriptionLine1: "Select Server"
+			HDPosterUrl: viewController.getThemeImageUrl("hd-switch-server.png"),
+			SDPosterUrl: viewController.getThemeImageUrl("hd-switch-server.png")
+		}
+    		profiles.Push( switchServer )
+
+		if ConnectionManager().isLoggedIntoConnect() = false then
+			' Add Server Tile (eventually move this)
+			connect = {
+				Title: "Sign in with Emby Connect"
+				ContentType: "ConnectSignIn"
+				ShortDescriptionLine1: "Sign in with Emby Connect"
+				HDPosterUrl: viewController.getThemeImageUrl("hd-connectsignin.jpg"),
+				SDPosterUrl: viewController.getThemeImageUrl("hd-connectsignin.jpg")
+			}
+			profiles.Push( connect )
+		end if
+	else
+		' Support also watching reset
+		gone = {
+			Title: "Remove all users"
+			ContentType: "Left"
+			ShortDescriptionLine1: "Remove All Users"
+			ShortDescriptionLine2: "Nobody else is watching"
+			HDPosterUrl: viewController.getThemeImageUrl("hd-default-userleft.png"),
+			SDPosterUrl: viewController.getThemeImageUrl("hd-default-userleft.png")
+		}
+		profiles.Push( gone )
 	end if
 	
 	obj = CreateObject("roAssociativeArray")

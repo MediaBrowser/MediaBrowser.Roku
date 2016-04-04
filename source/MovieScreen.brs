@@ -6,8 +6,8 @@ Function createMovieLibraryScreen(viewController as Object, parentId as String) 
 
     imageType      = (firstOf(RegUserRead("movieImageType"), "0")).ToInt()
 
-	names = ["Movies", "Jump In", "Collections", "Genres"]
-	keys = ["0", "1", "2", "3"]
+	names = ["Movies  ( Press * for Options )", "Jump In", "Collections", "Favorite Movies", "Genres", "Studios", "Internet Trailers", "Library Trailers"]
+	keys = ["0", "1", "2", "3", "4", "5", "6", "7"]
 
 	loader = CreateObject("roAssociativeArray")
 	loader.getUrl = getMovieLibraryRowScreenUrl
@@ -24,9 +24,7 @@ Function createMovieLibraryScreen(viewController as Object, parentId as String) 
 	screen.baseActivate = screen.Activate
 	screen.Activate = movieScreenActivate
 
-	screen.recreateOnActivate = true
-
-    screen.displayDescription = (firstOf(RegUserRead("movieDescription"), "0")).ToInt()
+    screen.displayDescription = (firstOf(RegUserRead("movieDescription"), "1")).ToInt()
 
 	screen.createContextMenu = movieScreenCreateContextMenu
 
@@ -37,7 +35,7 @@ End Function
 Sub movieScreenActivate(priorScreen)
 
     imageType      = (firstOf(RegUserRead("movieImageType"), "0")).ToInt()
-	displayDescription = (firstOf(RegUserRead("movieDescription"), "0")).ToInt()
+	displayDescription = (firstOf(RegUserRead("movieDescription"), "1")).ToInt()
 	
     if imageType = 0 then
 		gridStyle = "mixed-aspect-ratio"
@@ -79,13 +77,11 @@ Function getMovieLibraryRowScreenUrl(row as Integer, id as String) as String
 
 	if row = 0
 		url = url  + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?recursive=true"
-
 		if filterBy = 1
 			query.AddReplace("Filters", "IsUnPlayed")
 		else if filterBy = 2
 			query.AddReplace("Filters", "IsPlayed")
 		end if
-
 		if sortBy = 1
 			query.AddReplace("SortBy", "DateCreated,SortName")
 		else if sortBy = 2
@@ -95,41 +91,104 @@ Function getMovieLibraryRowScreenUrl(row as Integer, id as String) as String
 		else
 			query.AddReplace("SortBy", "SortName")
 		end if
-
 		if sortOrder = 1
 			query.AddReplace("SortOrder", "Descending")
 		end if
-
 		query.AddReplace("IncludeItemTypes", "Movie")
 		query.AddReplace("Fields", "Overview")
 		query.AddReplace("ParentId", m.parentId)
-
 	else if row = 1
 		' Alphabet - should never get in here
-
 	else if row = 2
+		' Collections
 		url = url  + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?recursive=true"
-
 		query.AddReplace("IncludeItemTypes", "BoxSet")
 		query.AddReplace("Fields", "Overview")
 		query.AddReplace("SortBy", "SortName")
 		'query.AddReplace("ParentId", m.parentId)
 		query.AddReplace("ImageTypeLimit", "1")
-
 	else if row = 3
-		url = url  + "/Genres?recursive=true"
-
+		' Favorite Movies
+		url = url + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?recursive=true"
+		query.AddReplace("Filters", "IsFavorite")
 		query.AddReplace("SortBy", "SortName")
+		query.AddReplace("SortOrder", "Ascending")
+		query.AddReplace("fields", "PrimaryImageAspectRatio,Overview")
+		'query.AddReplace("ImageTypeLimit", "1")
+		query.AddReplace("IncludeItemTypes", "Movie")
+	else if row = 4
+		' Genre
+		url = url  + "/Genres?recursive=true"
+		query.AddReplace("SortBy", "SortName")
+		query.AddReplace("sortorder", "Ascending")
+		query.AddReplace("fields", "Overview")
+		query.AddReplace("userid", getGlobalVar("user").Id)
+		query.AddReplace("ParentId", m.parentId)
+		'query.AddReplace("ImageTypeLimit", "1")
+		query.AddReplace("IncludeItemTypes", "Movie")
+	else if row = 5
+		' Studios
+		url = url  + "/Studios?recursive=true"
+		query.AddReplace("SortBy", "SortName")
+		query.AddReplace("sortorder", "Ascending")
+		query.AddReplace("fields", "Overview")
 		query.AddReplace("userid", getGlobalVar("user").Id)
 		query.AddReplace("IncludeItemTypes", "Movie")
+		'query.AddReplace("ImageTypeLimit", "1")
 		query.AddReplace("ParentId", m.parentId)
-		query.AddReplace("ImageTypeLimit", "1")
+	else if row = 6
+		' Internet Trailers
+		url = url  + "/Trailers?recursive=true"
+		if filterBy = 1
+			query.AddReplace("Filters", "IsUnPlayed")
+		else if filterBy = 2
+			query.AddReplace("Filters", "IsPlayed")
+		end if
+		if sortBy = 1
+			query.AddReplace("SortBy", "DateCreated,SortName")
+		else if sortBy = 2
+			query.AddReplace("SortBy", "DatePlayed,SortName")
+		else if sortBy = 3
+			query.AddReplace("SortBy", "PremiereDate,SortName")
+		else
+			query.AddReplace("SortBy", "SortName")
+		end if
+		if sortOrder = 1
+			query.AddReplace("SortOrder", "Descending")
+		end if
+		query.AddReplace("userid", getGlobalVar("user").Id)
+		query.AddReplace("IncludeItemTypes", "Trailer")
+		query.AddReplace("Fields", "Overview")
+		'query.AddReplace("ImageTypeLimit", "1")
+		query.AddReplace("ParentId", m.parentId)
+	else if row = 7
+		' All Trailers
+		url = url  + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?recursive=true"
+		if filterBy = 1
+			query.AddReplace("Filters", "IsUnPlayed")
+		else if filterBy = 2
+			query.AddReplace("Filters", "IsPlayed")
+		end if
+		if sortBy = 1
+			query.AddReplace("SortBy", "DateCreated,SortName")
+		else if sortBy = 2
+			query.AddReplace("SortBy", "DatePlayed,SortName")
+		else if sortBy = 3
+			query.AddReplace("SortBy", "PremiereDate,SortName")
+		else
+			query.AddReplace("SortBy", "SortName")
+		end if
+		if sortOrder = 1
+			query.AddReplace("SortOrder", "Descending")
+		end if
+		query.AddReplace("fields", "Overview")
+		query.AddReplace("HasTrailer", "true")
+		query.AddReplace("ParentId", m.parentId)
+		query.AddReplace("IncludeItemTypes", "Movie,Trailer")
 	end If
-
 	for each key in query
 		url = url + "&" + key +"=" + HttpEncode(query[key])
 	end for
-
     return url
 
 End Function
@@ -140,8 +199,13 @@ Function parseMovieLibraryScreenResult(row as Integer, id as string, startIndex 
 	primaryImageStyle = "mixed-aspect-ratio-portrait"
 	mode = ""
 
-	if row = 3
+	if row = 4
 		mode = "moviegenre"
+	else if row = 5
+		mode = "moviestudio"
+		ImageType = 1
+	else if row = 7
+		mode = "localtrailers"
 	end if
 
     return parseItemsResponse(json, imageType, primaryImageStyle, mode)
@@ -170,8 +234,8 @@ Function createMovieAlphabetScreen(viewController as Object, letter As String, p
 
     imageType      = (firstOf(RegUserRead("movieImageType"), "0")).ToInt()
 
-	names = ["Movies"]
-	keys = [letter]
+	names = ["Movies","Favorite Movies"]
+	keys = [letter,letter]
 
 	loader = CreateObject("roAssociativeArray")
 	loader.getUrl = getMovieAlphabetScreenUrl
@@ -212,14 +276,28 @@ Function getMovieAlphabetScreenUrl(row as Integer, id as String) as String
 	
 	if m.parentId <> invalid then query.parentId = m.parentId
 
-    if letter = "#" then
-        filters = {
-            NameLessThan: "a"
-        }
+    if row = 0 then
+	if letter = "#" then
+		filters = {
+			NameLessThan: "a"
+		}
+    	else
+        	filters = {
+            		NameStartsWith: letter
+        	}
+	end if
     else
-        filters = {
-            NameStartsWith: letter
-        }
+	if letter = "#" then
+		filters = {
+			NameLessThan: "a"
+			isFavorite: "true"
+		}
+    	else
+        	filters = {
+            		NameStartsWith: letter
+			isFavorite: "true"
+        	}
+	end if
     end if
 
     if filters <> invalid
@@ -251,8 +329,8 @@ Function createMovieGenreScreen(viewController as Object, genre As String) As Ob
 
     imageType      = (firstOf(RegUserRead("movieImageType"), "0")).ToInt()
 
-	names = ["Movies"]
-	keys = [genre]
+	names = ["Movies","Favorite Movies"]
+	keys = [genre,genre]
 
 	loader = CreateObject("roAssociativeArray")
 	loader.getUrl = getMovieGenreScreenUrl
@@ -291,6 +369,9 @@ Function getMovieGenreScreenUrl(row as Integer, id as String) as String
 		ImageTypeLimit: "1"
     }
 
+    ' add favorites
+    if row = 1 then query.AddReplace("filters", "IsFavorite")
+
 	for each key in query
 		url = url + "&" + key +"=" + HttpEncode(query[key])
 	end for
@@ -303,6 +384,69 @@ Function parseMovieGenreScreenResult(row as Integer, id as string, startIndex as
 
 	imageType      = (firstOf(RegUserRead("movieImageType"), "0")).ToInt()
 
+    return parseItemsResponse(json, imageType, "mixed-aspect-ratio-portrait")
+
+End Function
+
+
+'******************************************************
+' createMovieStudiosScreen
+'******************************************************
+
+Function createMovieStudioScreen(viewController as Object, studio As String) As Object
+
+    imageType      = (firstOf(RegUserRead("movieImageType"), "0")).ToInt()
+
+	names = ["Movies","Favorite Movies"]
+	keys = [studio,studio]
+
+	loader = CreateObject("roAssociativeArray")
+	loader.getUrl = getMovieStudioScreenUrl
+	loader.parsePagedResult = parseMovieStudioScreenResult
+
+    if imageType = 0 then
+        screen = createPaginatedGridScreen(viewController, names, keys, loader, "mixed-aspect-ratio")
+    Else
+        screen = createPaginatedGridScreen(viewController, names, keys, loader, "two-row-flat-landscape-custom")
+    End If
+
+    screen.displayDescription = (firstOf(RegUserRead("movieDescription"), "1")).ToInt()
+
+    return screen
+
+End Function
+
+Function getMovieStudioScreenUrl(row as Integer, id as String) as String
+
+	studio = id
+
+    ' URL
+    url = GetServerBaseUrl() + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?recursive=true"
+
+    ' Query
+    query = {
+        IncludeItemTypes: "Movie",
+        fields: "Overview",
+        sortby: "SortName",
+        sortorder: "Ascending",
+	studios: studio,
+	ImageTypeLimit: "1"
+    }
+
+    ' add favorites
+    if row = 1 then query.AddReplace("filters", "IsFavorite")
+
+	for each key in query
+		url = url + "&" + key +"=" + HttpEncode(query[key])
+	end for
+
+    return url
+
+End Function
+
+Function parseMovieStudioScreenResult(row as Integer, id as string, startIndex as Integer, json as String) as Object
+
+    imageType      = (firstOf(RegUserRead("movieImageType"), "0")).ToInt()
     return parseItemsResponse(json, imageType, "mixed-aspect-ratio-portrait")
 
 End Function

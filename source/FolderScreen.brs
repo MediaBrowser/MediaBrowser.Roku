@@ -7,20 +7,22 @@ Function createFolderScreen(viewController as Object, item as Object) As Object
 	parentId = item.Id
 	
 	title = item.Title
-
+	debug("yo -> "+tostr(item.ContentType))
 	if item.ContentType = "BoxSet" then
-		settingsPrefix = "movie"
-		contextMenuType = invalid
+		settingsPrefix = "boxset"
+		contextMenuType = Invalid
 	else
 		settingsPrefix = "folders"
 		contextMenuType = "folders"
-		title = item.Title + "  (MENU *)"
+		title = item.Title + "  ( Press * for Options )"
 	End if
 
     imageType      = (firstOf(RegUserRead(settingsPrefix + "ImageType"), "0")).ToInt()
 
-	names = [title]
-	keys = [item.Id]
+	names = [title,"Favorite "+tostr(title)]
+	keys = ["0"+tostr(item.Id), "1"+tostr(item.Id)]
+	'names = [title]
+	'keys = [item.Id]
 
 	loader = CreateObject("roAssociativeArray")
 	loader.settingsPrefix = settingsPrefix
@@ -82,7 +84,7 @@ Sub folderScreenActivate(priorScreen)
 
 End Sub
 
-Function getFolderItemsQuery(settingsPrefix as String, contentType as String) as Object
+Function getFolderItemsQuery(row as integer, settingsPrefix as String, contentType as String) as Object
 
     filterBy       = (firstOf(RegUserRead(settingsPrefix + "FilterBy"), "0")).ToInt()
     sortBy         = (firstOf(RegUserRead(settingsPrefix + "SortBy"), "0")).ToInt()
@@ -90,14 +92,26 @@ Function getFolderItemsQuery(settingsPrefix as String, contentType as String) as
 
     query = {}
 
-    if filterBy = 1
-        query.AddReplace("Filters", "IsUnPlayed")
-    else if filterBy = 2
-        query.AddReplace("Filters", "IsPlayed")
-    end if
 
-	' Just take the default sort order for collections
+	' Just take the default filter and sort order for collections
 	if contentType <> "BoxSet" then
+
+		if filterBy = 1
+			if row = 1 then 
+				query.AddReplace("Filters", "IsUnPlayed,IsFavorite")
+			else
+				query.AddReplace("Filters", "IsUnPlayed")
+			end if
+		else if filterBy = 2
+			if row = 1 then 
+				query.AddReplace("Filters", "IsPlayed,IsFavorite")
+			else
+				query.AddReplace("Filters", "IsPlayed")
+			end if
+		else
+			if row = 1 then query.AddReplace("Filters", "IsFavorite")
+		end if
+
 		if sortBy = 1
 			query.AddReplace("SortBy", "DateCreated,SortName")
 		else if sortBy = 2
@@ -111,6 +125,10 @@ Function getFolderItemsQuery(settingsPrefix as String, contentType as String) as
 		if sortOrder = 1
 			query.AddReplace("SortOrder", "Descending")
 		end if
+	else
+		query.AddReplace("SortBy", "PremiereDate,SortName")
+		query.AddReplace("SortOrder", "Ascending")
+		if row = 1 then query.AddReplace("Filters", "IsFavorite")
 	end if
 
 	return query
@@ -120,13 +138,13 @@ End Function
 Function getFolderItemsUrl(row as Integer, id as String) as String
 
     ' URL
-    url = GetServerBaseUrl() + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?parentid=" + id
+    url = GetServerBaseUrl() + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?parentid=" + right(id,id.len() - 1)
 
     query = {
         fields: "Overview,PrimaryImageAspectRatio"
     }
 
-	filters = getFolderItemsQuery(m.settingsPrefix, m.contentType)
+	filters = getFolderItemsQuery(row, m.settingsPrefix, m.contentType)
 
     if filters <> invalid
         query = AddToQuery(query, filters)

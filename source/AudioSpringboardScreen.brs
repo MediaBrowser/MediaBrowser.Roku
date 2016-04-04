@@ -55,6 +55,7 @@ Function createAudioSpringboardScreen(context, index, viewController) As Dynamic
 
     if player.ContextScreenID = obj.ScreenID then
         NowPlayingManager().location = "fullScreenMusic"
+	GetGlobalAA().AddReplace("AudioConflict", "0")
     end if
 
     return obj
@@ -66,28 +67,36 @@ Sub audioSetupButtons()
     if NOT m.IsPlayable then return
 
     if m.Playstate = 2 then
-        m.AddButton("pause playing", "pause")
-        m.AddButton("stop playing", "stop")
-    else if m.Playstate = 1 then
-        m.AddButton("resume playing", "resume")
-        m.AddButton("stop playing", "stop")
-    else
-        m.AddButton("start playing", "play")
-    end if
+		m.AddButton("Pause Playing", "pause")
+		m.AddButton("Stop Playing", "stop")
+	else if m.Playstate = 1 then
+		m.AddButton("Resume Playing", "resume")
+		m.AddButton("Stop Playing", "stop")
+	else
+		m.AddButton("Start Playing", "play")
+	end if
 
-    if m.Context.Count() > 1 then
-        m.AddButton("next song", "next")
-        m.AddButton("previous song", "prev")
-    end if
+	if m.Context.Count() > 1 then
+		m.AddButton("Next Song", "next")
+		m.AddButton("Previous Song", "prev")
+	end if
 
-    if m.metadata.UserRating = invalid then
-        m.metadata.UserRating = 0
-    endif
-    if m.metadata.StarRating = invalid then
-        m.metadata.StarRating = 0
-    endif
+	if m.metadata.UserRating = invalid then
+		m.metadata.UserRating = 0
+	endif
+	if m.metadata.StarRating = invalid then
+		m.metadata.StarRating = 0
+	endif
+	sh = GetFullItemMetadata(m.metadata, false, {})
+	if sh.isFavorite <> invalid
+		if sh.isFavorite
+			m.AddButton("Remove as Favorite", "removefavorite")
+		else
+			m.AddButton("Mark as Favorite", "markfavorite")
+		end if
+	end if
 
-    m.AddButton("more...", "more")
+	m.AddButton("More...", "more")
 End Sub
 
 Sub audioGetMediaDetails(content)
@@ -128,10 +137,25 @@ Function audioHandleMessage(msg) As Boolean
                 if m.GotoPrevItem() then
                     player.Prev()
                 end if
+	    else if buttonCommand = "removefavorite" then
+		result = postFavoriteStatus(m.metadata.Id, false)
+		if result then
+        		createDialog("Favorites Changed", m.metadata.Title + " has been removed from your favorites.", "OK", true)
+		else
+			createDialog("Favorites Error!", m.metadata.Title + " has NOT been removed from your favorites.", "OK", true)
+		end if
+		m.refreshOnActivate = true
+    	    else if buttonCommand = "markfavorite" then
+		result = postFavoriteStatus(m.metadata.Id, true)
+		if result then
+        		createDialog("Favorites Changed", m.metadata.Title + " has been added to your favorites.", "OK", true)
+		else
+			createDialog("Favorites Error!", m.metadata.Title + " has NOT been added to your favorites.", "OK", true)
+		end if
+		m.refreshOnActivate = true
             else if buttonCommand = "more" then
                 dialog = createBaseDialog()
-                dialog.Title = ""
-                dialog.Text = ""
+                dialog.Title = "More Options"
                 dialog.Item = m.metadata
                 if m.IsShuffled then
                     dialog.SetButton("shuffle", "Shuffle: On")
@@ -141,20 +165,26 @@ Function audioHandleMessage(msg) As Boolean
 
                 if player.ContextScreenID = m.ScreenID then
                     if player.Repeat = 2 then
-                        dialog.SetButton("loop", "Loop: On")
+			dialog.SetButton("loop", "Loop: On")
                     else
-                        dialog.SetButton("loop", "Loop: Off")
+			dialog.SetButton("loop", "Loop: Off")
                     end if
                 end if
 
+		If AudioPlayer().Context <> invalid
+			dialog.SetButton("clear", "Clear the Music List ("+tostr(AudioPlayer().Context.count())+" songs)")
+		end if
                 dialog.SetButton("rate", "_rate_")
                 
-				dialog.SetButton("close", "Back")
+		dialog.SetButton("close", "Close This Window")
                 dialog.HandleButton = audioDialogHandleButton
                 dialog.ParentScreen = m
                 dialog.Show()
-            else
-                handled = false
+	    else if command = "close" then
+		m.screen.close()
+		return true
+    	    else
+		handled = false
             end if
             m.SetupButtons()
         else if msg.isRemoteKeyPressed() then
@@ -250,7 +280,14 @@ Function audioDialogHandleButton(command, data) As Boolean
             player.SetRepeat(2)
         end if
         m.Refresh()
-		
+    else if command = "clear" then
+	Audioplayer().Stop()
+	Audioplayer().reportPlayback("stop")
+	Audioplayer().ClearContent()
+	m.ViewController.PopScreen(m.ViewController.screens[m.ViewController.screens.Count() - 1])
+	m.ViewController.PopScreen(m.ViewController.screens[m.ViewController.screens.Count() - 1])
+	obj.refreshOnActivate = true
+	return true
     else if command = "rate" then
         Debug("audioHandleMessage:: Rate audio for key " + tostr(obj.metadata.ratingKey))
         rateValue% = (data /10)

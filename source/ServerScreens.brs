@@ -190,6 +190,8 @@ Function serverListScreenHandleMessage(msg) As Boolean
 					
 					if result.State = "Unavailable"
 						createDialog("Unable To Connect", "We were unable to connect to this server. Please make sure it is running and try again.", "Back", true)
+                        			ConnectionManager().DeleteServer(serverId)
+						viewController.ShowInitialScreen()
 					else
 						navigateFromConnectionResult(result)
 					end if
@@ -334,7 +336,9 @@ Sub onServerAddressDiscovered(viewController as Object, serverAddress As String)
 	facade.Close()
 	
     if result.State = "Unavailable"
-		createDialog("Unable To Connect", "We were unable to connect to this server. Please make sure it is running and try again.", "Back", true)
+	createDialog("Unable To Connect", "We were unable to connect to this server. Please make sure it is running and try again.", "Back", true)
+	ConnectionManager().DeleteServer(serverAddress)
+	viewController.ShowInitialScreen()
         return 
     end if
 	

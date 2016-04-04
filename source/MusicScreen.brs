@@ -4,8 +4,8 @@
 
 Function createMusicLibraryScreen(viewController as Object, parentId as String) As Object
 
-	names = ["Albums", "Artists", "Jump Into Albums", "Jump Into Artists", "Genres"]
-	keys = ["0", "1", "2", "3", "4"]
+	names = ["Albums", "Artists", "Jump Into Albums", "Jump Into Artists", "Favorite Songs", "Favorite Albums", "Favorite Artists", "Genres", "Studios"]
+	keys = ["0", "1", "2", "3", "4", "5", "6", "7", "8"]
 
 	loader = CreateObject("roAssociativeArray")
 	loader.getUrl = getMusicLibraryRowScreenUrl
@@ -42,10 +42,10 @@ Function getMusicLibraryRowScreenUrl(row as Integer, id as String) as String
 		url = url  + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?recursive=true"
 
 		query = {
-			IncludeItemTypes: "MusicAlbum"
-			fields: "Overview"
-			sortby: "AlbumArtist,SortName"
+			sortby: "AlbumArtist,SortName",
 			sortorder: "Ascending",
+			IncludeItemTypes: "MusicAlbum",
+			fields: "Overview,Genres",
 			parentId: m.parentId,
 			ImageTypeLimit: "1"
 		}
@@ -53,8 +53,8 @@ Function getMusicLibraryRowScreenUrl(row as Integer, id as String) as String
 		url = url  + "/Artists/AlbumArtists?recursive=true"
 
 		query = {
-			fields: "Overview"
-			sortby: "SortName"
+			fields: "Overview,Genres",
+			sortby: "SortName",
 			sortorder: "Ascending",
 			parentId: m.parentId,
 			UserId: getGlobalVar("user").Id,
@@ -65,15 +65,62 @@ Function getMusicLibraryRowScreenUrl(row as Integer, id as String) as String
 	else if row = 3
 		' Music artist alphabet - should never get in here
 	else if row = 4
+		url = url  + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?recursive=true"
+	
+		query = {
+                    filters: "IsFavorite",
+		    SortBy: "AlbumArtist,SortName",
+                    SortOrder: "Ascending",
+                    IncludeItemTypes: "Audio",
+                    Fields: "AudioInfo,ParentId,SyncInfo,Overview,Genres",
+		    parentId: m.parentId,
+                    ImageTypeLimit: "1"
+		}
+
+	else if row = 5
+		url = url  + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?recursive=true"
+
+		query = {
+			filters: "IsFavorite",
+			sortby: "AlbumArtist,SortName",
+			sortorder: "Ascending",
+			IncludeItemTypes: "MusicAlbum",
+			fields: "Overview,Genres",
+			parentId: m.parentId,
+			ImageTypeLimit: "1"
+		}
+	else if row = 6
+		url = url  + "/Artists/AlbumArtists?recursive=true"
+
+		query = {
+			filters: "IsFavorite",
+			sortby: "SortName",
+			sortorder: "Ascending",
+			fields: "Overview,Genres",
+			parentId: m.parentId,
+			UserId: getGlobalVar("user").Id,
+			ImageTypeLimit: "1"
+		}
+	else if row = 7
 		url = url  + "/MusicGenres?recursive=true"
 
 		query = {
-			userid: getGlobalVar("user").Id
-			recursive: "true"
-			sortby: "SortName"
+			userid: getGlobalVar("user").Id,
+			recursive: "true",
+			fields: "Overview,Genres"
+			sortby: "SortName",
 			sortorder: "Ascending",
 			parentId: m.parentId
 		}
+	else if row = 8
+		url = url  + "/Studios?recursive=true"
+		query.AddReplace("SortBy", "SortName")
+		query.AddReplace("sortorder", "Ascending")
+		query.AddReplace("fields", "Overview,Genres")
+		query.AddReplace("userid", getGlobalVar("user").Id)
+		query.AddReplace("IncludeItemTypes", "MusicAlbum")
+		query.AddReplace("ParentId", m.parentId)
+		'query.AddReplace("ImageTypeLimit", "1")
 	end If
 
 	for each key in query
@@ -89,8 +136,9 @@ Function parseMusicLibraryScreenResult(row as Integer, id as string, startIndex 
 	imageType      = 1
 	primaryImageStyle = "two-row-flat-landscape-custom"
 	mode = ""
-
-	if row <> 4 then primaryImageStyle = "arced-square"
+	if row = 8 then mode = "musicstudio"
+	if row = 4 then mode = "musicfavorite"
+	if row = 1 or row = 5 then primaryImageStyle = "mixed-aspect-ratio-square" 'arced-square
 
     return parseItemsResponse(json, imageType, primaryImageStyle, mode)
 
@@ -268,23 +316,61 @@ Function getMusicGenreDataContainer(viewController as Object, item as Object) as
 End Function
 
 '**********************************************************
+'** createMusicStudiosScreen
+'**********************************************************
+
+Function createMusicStudiosScreen(viewController as Object, studio As String) As Object
+
+    if validateParam(studio, "roString", "createMusicStudiosScreen") = false return -1
+
+	' Dummy up an item
+	item = CreateObject("roAssociativeArray")
+	item.Title = studio
+
+    screen = CreatePosterScreen(viewController, item, "arced-square")
+
+ 	screen.GetDataContainer = getMusicStudioDataContainer
+
+    return screen
+
+End Function
+
+Function getMusicStudioDataContainer(viewController as Object, item as Object) as Object
+
+    genre = item.Title
+
+    MusicMetadata = InitMusicMetadata()
+
+    musicData = MusicMetadata.GetStudioAlbums(genre)
+    if musicData = invalid
+        return invalid
+    end if
+
+	obj = CreateObject("roAssociativeArray")
+	obj.names = []
+	obj.keys = []
+	obj.items = musicData.Items
+
+	return obj
+
+End Function
+
+'**********************************************************
 '** createMusicItemSpringboardScreen
 '**********************************************************
 
 Function createMusicItemSpringboardScreen(context, index, viewController) As Dynamic
 
-    obj = createBaseSpringboardScreen(context, index, viewController)
+	obj = createBaseSpringboardScreen(context, index, viewController)
 
-    obj.SetupButtons = musicItemSpringboardSetupButtons
+	obj.SetupButtons = musicItemSpringboardSetupButtons
 	
-    obj.superHandleMessage = obj.HandleMessage
-    obj.HandleMessage = musicItemSpringboardHandleMessage
-	
+	obj.superHandleMessage = obj.HandleMessage
+	obj.HandleMessage = musicItemSpringboardHandleMessage
 	obj.GetMediaDetails = audioGetMediaDetails
-	
-	obj.itemInfo = context[index]
-
-	if (obj.itemInfo.ContentType <> "MusicAlbum") then
+	obj.Activate = MusicItemActivate
+	obj.item = GetFullItemMetadata(context[index], false, {})
+	if (obj.item.ContentType <> "MusicAlbum") then
 		obj.screen.SetPosterStyle("rounded-rect-16x9-generic")
 	end if
 	
@@ -292,17 +378,38 @@ Function createMusicItemSpringboardScreen(context, index, viewController) As Dyn
 End Function
 
 Sub musicItemSpringboardSetupButtons()
-    m.ClearButtons()
-	
-	if (m.itemInfo.ContentType = "MusicAlbum")
+	m.ClearButtons()
+	m.item = GetFullItemMetadata(m.item, false, {})
+	if (m.item.ContentType = "MusicAlbum")
 		m.AddButton("Tracks", "tracklist")
 	else
 		m.AddButton("Albums", "albumlist")
 	end if
-	
 	m.AddButton("Play all", "playall")
 	m.AddButton("Shuffle", "shuffle")
-	m.AddButton("Instant mix", "instantmix")	
+	m.AddButton("Instant mix", "instantmix")
+	if m.item <> invalid
+		if m.item.IsFavorite <> invalid
+			if m.item.IsFavorite
+				m.AddButton("Remove as a Favorite", "removefavorite")
+			else
+				m.AddButton("Mark as a Favorite", "markfavorite")
+			end if
+		end if
+	end if
+End Sub
+
+'**************************************************************
+'** MusicItemActivate
+'**************************************************************
+
+Sub MusicItemActivate(priorScreen)
+    	if m.refreshOnActivate <> invalid
+		if m.refreshOnActivate
+			m.refreshOnActivate = false
+			m.Refresh(true)
+		end if
+	end if
 End Sub
 
 '**********************************************************
@@ -310,7 +417,6 @@ End Sub
 '**********************************************************
 
 Function musicGetSongsForItem(item) As Object
-	
 	songs = []
 	albums = []
 	
@@ -322,14 +428,25 @@ Function musicGetSongsForItem(item) As Object
 	else if (item.ContentType = "MusicGenre")
 		albumData = MusicMetadata.GetGenreAlbums(item.Title)
 		albums = albumData.Items
+	else if (item.ContentType = "MusicStudio")
+		albumData = MusicMetadata.GetStudioAlbums(item.Title)
+		albums = albumData.Items
 	else if (item.ContentType = "MusicAlbum")
 		albums = [item]
 	end if
 
-	for each a in albums	
+	'if (item.ContentType = "Audio") then
+		'return item
+	'else
+	  for each a in albums	
 		aData = MusicMetadata.GetAlbumSongs(a.Id)
-		songs.Append(aData.Items)
-	end for	
+		if aData <> invalid
+			if aData.Items <> invalid
+				songs.Append(aData.Items)
+			end if
+		end if
+	  end for
+	'end if	
 		
 	return songs	
 		
@@ -345,7 +462,7 @@ Function musicGetInstantMixForItem(item) As Object
 		
 	url = GetServerBaseUrl()
 	userId = HttpEncode(getGlobalVar("user").Id)
-	fieldsString = "&fields=" + HttpEncode("PrimaryImageAspectRatio,MediaSources")
+	fieldsString = "&fields=" + HttpEncode("PrimaryImageAspectRatio,MediaSources,Overview,Genres")
 	
 	if (item.ContentType = "MusicAlbum")
 		url = url + "/Albums/" + HttpEncode(item.id)
@@ -353,6 +470,8 @@ Function musicGetInstantMixForItem(item) As Object
 		url = url + "/Artists/" + HttpEncode(item.Title)
 	else if (item.ContentType = "MusicGenre")
 		url = url + "/MusicGenres/" + HttpEncode(item.Title)
+	else if (item.ContentType = "MusicStudio")
+		url = url + "/Studios/" + HttpEncode(item.Title)
 	end if
 	
 	url = url + "/InstantMix?UserId=" + userId + fieldsString + "&Limit=100"
@@ -379,39 +498,42 @@ End Function
 
 Function createMusicListScreen(viewController as Object, tracks As Object) As Object
 
-    screen = CreateListScreen(viewController)
+	screen = CreateListScreen(viewController)
 
 	screen.baseHandleMessage = screen.HandleMessage
 	screen.HandleMessage = musicSongsHandleMessage
 
-    player = AudioPlayer()
+	player = AudioPlayer()
 
-    totalDuration = GetTotalDuration(tracks)
+	totalDuration = GetTotalDuration(tracks)
+	screen.SetHeader("Tracks (" + itostr(tracks.Count()) + ") - " + totalDuration)
 
-    screen.SetHeader("Tracks (" + itostr(tracks.Count()) + ") - " + totalDuration)
+	if getGlobalVar("legacyDevice")
+		backButton = {
+			Title: ">> Back <<",
+			ContentType: "exit",
+		}
 
-    if getGlobalVar("legacyDevice")
-        backButton = {
-            Title: ">> Back <<",
-            ContentType: "exit",
-        }
+		musicData.Items.Unshift( backButton )
+	end if
 
-        musicData.Items.Unshift( backButton )
-    end if
+	screen.SetContent(tracks)
 
-    screen.SetContent(tracks)
+	player.SetRepeat(0)
 
-    player.SetRepeat(0)
-
-    screen.prevIconIndex = invalid
-    screen.focusedItemIndex = 0
+	screen.prevIconIndex = invalid
+	screen.focusedItemIndex = 0
 	screen.audioItems = tracks
 
 	screen.IsShuffled = false
 	
 	screen.playFromIndex = musicSongsPlayFromIndex
 
-    return screen
+	' reset context menu conflict to use Audio
+	GetGlobalAA().AddReplace("AudioConflict", "0")
+	GetGlobalAA().AddReplace("musicstop", "0")
+
+	return screen
 
 End Function
 
@@ -421,8 +543,24 @@ End Function
 
 Function createMusicSongsScreen(viewController as Object, artistInfo As Object) As Object
     MusicMetadata = InitMusicMetadata()
-    musicData = MusicMetadata.GetAlbumSongs(artistInfo.Id)
+    if artistInfo.contentType <> "Audio" and artistInfo.contentType <> "MusicFavorite" and artistInfo.contentType <> "RecentlyPlayed" and artistInfo.contentType <> "MostPlayed" then
+    	musicData = MusicMetadata.GetAlbumSongs(artistInfo.Id)
 	return createMusicListScreen(viewController, musicData.Items)
+	' Favorite
+    else if artistInfo.contentType = "MusicFavorite"
+    	musicData = MusicMetadata.GetSong(artistInfo.Id)
+	return createMusicListScreen(viewController, musicData.Items)
+	' Recently Played
+    else if artistInfo.contentType = "RecentlyPlayed"
+    	musicData = MusicMetadata.GetRecent(artistInfo.Id)
+	debug("got back to music song recent")
+	return createMusicListScreen(viewController, musicData.Items)
+	' Most Played
+    else if artistInfo.contentType = "MostPlayed"
+    	musicData = MusicMetadata.GetMost(artistInfo.Id)
+	debug("got back to music song most")
+	return createMusicListScreen(viewController, musicData.Items)
+    end if
 End Function
 
 Sub musicSongsPlayFromIndex(index)
@@ -490,7 +628,10 @@ Function musicSongsHandleMessage(msg) As Boolean
 
                 Debug("Close Music Album Screen")
                 If player.IsPlaying Then
-                    player.Stop()
+		    sm = FirstOf(RegRead("prefStopMusic"),"true")
+		    if sm = "true" then
+                    	player.Stop()
+		    end if
                 End If
 
 				m.Screen.Close()
@@ -505,7 +646,10 @@ Function musicSongsHandleMessage(msg) As Boolean
 
             Debug("Close Music Album Screen")
             If player.IsPlaying Then
-                player.Stop()
+		    sm = FirstOf(RegRead("prefStopMusic"),"true")
+		    if sm = "true" then
+                    	player.Stop()
+		    end if
             End If
 
         Else If msg.isRemoteKeyPressed()
@@ -544,26 +688,46 @@ End Function
 	
 Function musicItemSpringboardHandleMessage(msg) As Boolean
     handled = false
-
+    screen = m
     if type(msg) = "roSpringboardScreenEvent" then
         if msg.isButtonPressed() then
             handled = true
             buttonCommand = m.buttonCommands[str(msg.getIndex())]
             Debug("Button command: " + tostr(buttonCommand))
 			
-		breadcrumbText = m.itemInfo.Title
-		screenName = tostr(buttonCommand) + " " + tostr(m.itemInfo.id)
+		breadcrumbText = m.item.Title
+		screenName = tostr(buttonCommand) + " " + tostr(m.item.id)
 		startPlaying = true
 		busyDialog = invalid
 		
 		if (buttonCommand = "albumlist") then
-			if (m.itemInfo.ContentType = "MusicArtist")
-				listScreen = createMusicAlbumsScreen(m.ViewController, m.itemInfo)
-			else if (m.itemInfo.ContentType = "MusicGenre")
-				listScreen = createMusicGenresScreen(m.ViewController, m.itemInfo.Title)
+			if (m.item.ContentType = "MusicArtist")
+				listScreen = createMusicAlbumsScreen(m.ViewController, m.item)
+			else if (m.item.ContentType = "MusicGenre")
+				listScreen = createMusicGenresScreen(m.ViewController, m.item.Title)
+			else if (m.item.ContentType = "MusicStudio")
+				listScreen = createMusicStudiosScreen(m.ViewController, m.item.Title)
 			end if
 			
 			startPlaying = false
+		else if buttonCommand = "removefavorite" then
+			screen.refreshOnActivate = true
+			result = postFavoriteStatus(m.item.Id, false)
+			if result then
+        			createDialog("Favorites Changed", m.item.Title + " has been removed from your favorites.", "OK", true)
+			else
+				createDialog("Favorites Error!", m.item.Title + " has NOT been removed from your favorites.", "OK", true)
+			end if
+			return true
+    		else if buttonCommand = "markfavorite" then
+			screen.refreshOnActivate = true
+			result = postFavoriteStatus(m.item.Id, true)
+			if result then
+        			createDialog("Favorites Changed", m.item.Title + " has been added to your favorites.", "OK", true)
+			else
+				createDialog("Favorites Error!", m.item.Title + " has NOT been added to your favorites.", "OK", true)
+			end if
+			return true
 		else
 		
 			if (buttonCommand = "instantmix") then
@@ -576,11 +740,11 @@ Function musicItemSpringboardHandleMessage(msg) As Boolean
 				busyDialog.ShowBusyAnimation()
 				busyDialog.Show()
 				
-				tracks = musicGetInstantMixForItem(m.itemInfo)
+				tracks = musicGetInstantMixForItem(m.item)
 				breadcrumbText = "Instant Mix For " + breadcrumbText
 				screenName = "instantmix " + screenName
 			else
-				tracks = musicGetSongsForItem(m.itemInfo)
+				tracks = musicGetSongsForItem(m.item)
 				
 				if (buttonCommand = "shuffle") AND (tracks.Count() > 1) then 
 					startIndex = rnd(tracks.Count()) - 1
@@ -589,8 +753,8 @@ Function musicItemSpringboardHandleMessage(msg) As Boolean
 				
 				if (buttonCommand = "tracklist") then startPlaying = false
 				
-				if (m.itemInfo.ContentType = "MusicAlbum") AND (m.itemInfo.Artist <> invalid) AND (m.itemInfo.Artist <> "") then
-						breadcrumbText = m.itemInfo.Artist + " - " + breadcrumbText
+				if (m.item.ContentType = "MusicAlbum") AND (m.item.Artist <> invalid) AND (m.item.Artist <> "") then
+						breadcrumbText = m.item.Artist + " - " + breadcrumbText
 				end if	
 			end if	
 						
@@ -616,10 +780,9 @@ end Function
 '**********************************************************
 
 Function GetTotalDuration(songs As Object) As String
-    
-	total = 0
+    total = 0
     For each songData in songs
-		songLength = songData.Length
+	songLength = songData.Length
         total = total + firstOf(songLength, 0)
     End For
 

@@ -38,7 +38,6 @@ Function CreateGridScreen(viewController as Object, style As String) As Object
     grid.SetUpBehaviorAtTopRow(upBehavior)
 
     screen.DestroyAndRecreate = gridDestroyAndRecreate
-    screen.Show = ShowGridScreen
     screen.HandleMessage = gridHandleMessage
     screen.Activate = gridActivate
     screen.OnTimerExpired = gridOnTimerExpired
@@ -61,6 +60,7 @@ Function CreateGridScreen(viewController as Object, style As String) As Object
 
     screen.SetDescriptionVisible = ShowGridDescriptionBox
     screen.SetFocusedListItem    = SetGridFocusedItem
+    screen.Show = ShowGridScreen
     screen.Close                 = CloseGridScreen
 	
 	screen.emptyItemsText = "This section doesn't contain any items."
@@ -267,15 +267,20 @@ End Sub
 Sub setGridTheme(viewController as Object, style as String)
     ' This has to be done before the CreateObject call. Once the grid has
     ' been created you can change its style, but you can't change its theme.
-
+    
+    border = firstOf(RegRead("theme_border"), "1")
     app = CreateObject("roAppManager")
     if style = "two-row-flat-landscape-custom" then
-        'app.SetThemeAttribute("GridScreenFocusBorderHD", viewController.getThemeImageUrl("hd-border-flat-landscape.png"))
-        'app.SetThemeAttribute("GridScreenBorderOffsetHD", "-34,-19")
+        if border = "1" then
+		app.SetThemeAttribute("GridScreenFocusBorderHD", vcGetDefaultThemeImageUrl("hd-border-flat-landscape.png"))
+		app.SetThemeAttribute("GridScreenBorderOffsetHD", "-34,-19")
+	end if
         app.SetThemeAttribute("GridScreenDescriptionOffsetHD", "270,140")
     else if style = "mixed-aspect-ratio" then
-        'app.SetThemeAttribute("GridScreenFocusBorderHD", viewController.getThemeImageUrl("hd-border-portrait.png"))
-        'app.SetThemeAttribute("GridScreenBorderOffsetHD", "-25,-35")
+        if border = "1" then
+		app.SetThemeAttribute("GridScreenFocusBorderHD", vcGetDefaultThemeImageUrl("hd-border-portrait.png"))
+		app.SetThemeAttribute("GridScreenBorderOffsetHD", "-25,-35")
+	end if
         app.SetThemeAttribute("GridScreenDescriptionOffsetHD", "210,260")
     end if
 End Sub

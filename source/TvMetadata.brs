@@ -13,12 +13,20 @@ Function getTvSeasons(seriesId As String) As Object
 
     ' URL
     url = GetServerBaseUrl() + "/Shows/" + HttpEncode(seriesId) + "/Seasons"
-
+    showmiss = FirstOf(RegRead("prefShowMiss"),"true")
+    showup =  FirstOf(RegRead("prefShowUp"),"true")
+    
     ' Query
     query = {
-        UserId: getGlobalVar("user").Id
-        fields: "PrimaryImageAspectRatio"
+       	UserId: getGlobalVar("user").Id
+	fields: "PrimaryImageAspectRatio"
     }
+    if showmiss = "false" then
+	query.AddReplace("IsMissing", "false")
+    end if
+    if showup = "false" then
+	query.AddReplace("IsVirtualUnaired", "false")
+    end if
 
     ' Prepare Request
     request = HttpRequest(url)
@@ -38,23 +46,26 @@ Function getTvSeasons(seriesId As String) As Object
         jsonObj   = ParseJSON(response)
 
         if jsonObj = invalid
+	    createDialog("JSON Error", "Error while parsing JSON response for Seasons List for Show.", "OK", true)
             Debug("Error while parsing JSON response for TV Seasons List for Show")
             return invalid
         end if
 
         for each i in jsonObj.Items
-                ' Set the Id
-                listIds.push( i.Id )
+            ' Set the Id
+            listIds.push( i.Id )
 
-                ' Set the Name
-                listNames.push( firstOf(i.Name, "Unknown") )
+            ' Set the Name
+            listNames.push( firstOf(i.Name, "Unknown") )
 				
-				listNumbers.push(firstOf(i.IndexNumber, -1))
+	    listNumbers.push(firstOf(i.IndexNumber, -1))
         end for
         
         return [listIds, listNames, listNumbers]
+    else
+	createDialog("Response Error!", "Error while parsing JSON response for Seasons List for Show. (invalid)", "OK", true)
     end if
-
+    
     return invalid
 End Function
 
@@ -91,7 +102,8 @@ Function getTvNextEpisode(seriesId As String) As Object
         jsonObj = ParseJSON(response)
 
         if jsonObj = invalid
-            Debug("Error while parsing JSON response for TV Show Next Unplayed Episode")
+	    createDialog("JSON Error", "Error while parsing JSON response for Show Next Unplayed Episode.", "OK", true)
+            Debug("Error while parsing JSON response for Show Next Unplayed Episode")
             return invalid
         end if
 
@@ -114,7 +126,8 @@ Function getTvNextEpisode(seriesId As String) As Object
         end if
 
         return metaData
+    else
+    	createDialog("Response Error!", "Error while parsing JSON response for Show Next Unplayed Episode. (invalid)", "OK", true)
     end if
-
     return invalid
 End Function

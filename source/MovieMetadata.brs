@@ -11,6 +11,7 @@ Function parseSuggestedMoviesResponse(response) As Object
         result     = ParseJSON(fixedResponse)
 
         if result = invalid
+	    createDialog("Parsing Error!", "Error in parseSuggestedMoviesResponse.", "OK", true)
             Debug("Error in parseSuggestedMoviesResponse")
             return invalid
         end if
@@ -38,6 +39,8 @@ Function parseSuggestedMoviesResponse(response) As Object
             BaselineItemName: category.BaselineItemName
 			TotalCount: contentList.Count()
         }
+    else
+	createDialog("Response Error!", "No Suggested Movie Found. (invalid)", "OK", true)
     end if
 
     return invalid

@@ -38,6 +38,8 @@ Function AudioPlayer() As Object
         obj.Context = invalid
         obj.CurIndex = invalid
         obj.ContextScreenID = invalid
+	obj.ClearContent = AudioPlayerClearContent
+
         obj.SetContext = audioPlayerSetContext
         obj.SetContextFromItems = audioPlayerSetContextFromItems
 
@@ -74,15 +76,37 @@ Function AudioPlayer() As Object
 
         ' Singleton
         m.AudioPlayer = obj
+
     end if
 
     return m.AudioPlayer
-
 End Function
 
-Function audioPlayerHandleMessage(msg) As Boolean
-    handled = false
+Sub audioPlayerClearContent()
+	m.reportPlayback("stop")
+	m.Stop()
+	GetGlobalAA().AddReplace("musicstop", "1")
+	GetGlobalAA().AddReplace("AudioConflict", "1")
+	'm.timelineTimer = invalid
+	'm.IgnoreTimelines = true
+	'm.player.ClearContent()
+	'fn = function() :m.AudioPlayer = invalid :end function
+	'fn()
+End Sub
 
+Function audioPlayerHandleMessage(msg) As Boolean
+    ' untangle audio from video playing
+    if NowPlayingManager().location <> invalid 
+	if NowPlayingManager().location = "fullScreenVideo"
+		return false
+	end if
+    end if
+
+    ' if playlist is invalid avoid calling handler
+    if AudioPlayer().context = invalid then return false
+
+    handled = false
+	debug("handling AUDIO message")
     if type(msg) = "roAudioPlayerEvent" then
         handled = true
         item = m.Context[m.CurIndex]
@@ -95,8 +119,7 @@ Function audioPlayerHandleMessage(msg) As Boolean
             if m.ContextScreenID <> invalid then
                 amountPlayed = m.GetPlaybackProgress()
                 Debug("Sending analytics event, appear to have listened to audio for " + tostr(amountPlayed) + " seconds")
-                
-				m.reportPlayback("stop")
+		m.reportPlayback("stop")
             end if
 
             if m.Repeat <> 1 then
@@ -134,16 +157,17 @@ Function audioPlayerHandleMessage(msg) As Boolean
 			m.reportPlayback("start")
 
         else if msg.isStatusMessage() then
-            Debug("Audio player status: " + tostr(msg.getMessage()))
+		stat = tostr(msg.getMessage())
+		Debug("Audio player status: " + stat)
 
         else if msg.isFullResult() then
             Debug("Playback of entire audio list finished")
-			m.reportPlayback("stop")
+	    m.reportPlayback("stop")
             m.Stop()
 
         else if msg.isPartialResult() then
             Debug("isPartialResult")
-			m.reportPlayback("stop")
+	    m.reportPlayback("stop")
 
         else if msg.isPaused() then
             Debug("Stream paused by user")
@@ -151,15 +175,15 @@ Function audioPlayerHandleMessage(msg) As Boolean
             m.IsPaused = true
             m.playbackOffset = m.playbackOffset + m.playbackTimer.GetElapsedSeconds()
             m.playbackTimer.Mark()
-			m.reportPlayback("progress")
+	    m.reportPlayback("progress")
 
         else if msg.isResumed() then
             Debug("Stream resumed by user")
             m.IsPlaying = true
             m.IsPaused = false
             m.playbackTimer.Mark()
-			m.reportPlayback("progress")
-        end if
+	    m.reportPlayback("progress")
+	end if
 
         m.UpdateNowPlaying()
     end if
@@ -179,10 +203,13 @@ Sub audioPlayerReportPlayback(action as String)
 End Sub
 
 Sub audioPlayerCleanup()
-    m.Stop()
-    m.timelineTimer = invalid
-    fn = function() :m.AudioPlayer = invalid :end function
-    fn()
+	sm = FirstOf(RegRead("prefStopMusic"),"true")
+	if sm = "true" then
+		m.Stop()
+		m.timelineTimer = invalid
+		fn = function() :m.AudioPlayer = invalid :end function
+		fn()
+	end if
 End Sub
 
 Sub audioPlayerPlay()
@@ -194,8 +221,8 @@ End Sub
 Sub audioPlayerPlayIndex(index as integer)
     if m.Context <> invalid then
         m.player.Stop()
-		m.player.SetNext(index)
-		m.player.Play()
+	m.player.SetNext(index)
+	m.player.Play()
     end if
 End Sub
 
@@ -214,7 +241,7 @@ End Sub
 Sub audioPlayerStop()
     if m.Context <> invalid then
         m.player.Stop()
-		m.reportPlayback("stop")
+	m.reportPlayback("stop")
         m.player.SetNext(m.CurIndex)
         m.IsPlaying = false
         m.IsPaused = false
@@ -393,7 +420,7 @@ Function normalizeAudioItems(items)
 		url = GetServerBaseUrl()
 		userId = HttpEncode(getGlobalVar("user").Id)
 		
-		url = url + "/Users/"+userId+"/Items?" + "&fields=" + HttpEncode("PrimaryImageAspectRatio,MediaSources") + "&Ids=" + ids
+		url = url + "/Users/"+userId+"/Items?" + "&fields=" + HttpEncode("PrimaryImageAspectRatio,MediaSources,Overview") + "&Ids=" + ids
 		
 		' Prepare Request
 		request = HttpRequest(url)
@@ -409,36 +436,56 @@ Function normalizeAudioItems(items)
 		end if	
 	
 	end if
-	
+
 	return items
 
 End Function
 
 Sub audioPlayerShowContextMenu()
-    dialog = createBaseDialog()
-    dialog.Title = "Now Playing"
-    dialog.Text = firstOf(m.Context[m.CurIndex].Title, "")
+	skip = FirstOf(GetGlobalVar("AudioConflict"),"0")
+	musicstop = FirstOf(GetGlobalVar("musicstop"),"0")
+	if skip = "0" and AudioPlayer().Context <> invalid and musicstop = "0" then
 
-    if m.IsPlaying then
-        dialog.SetButton("pause", "Pause")
-    else if m.IsPaused then
-        dialog.SetButton("resume", "Play")
-    else
-        dialog.SetButton("play", "Play")
-    end if
-    dialog.SetButton("stop", "Stop")
+		dialog = createBaseDialog()
+		dialog.Title = "Now Playing"
+		dialog.Text = firstOf(m.Context[m.CurIndex].Title, "") + chr(10) + firstOf(m.Context[m.CurIndex].Artist, "")
 
-    if m.Context.Count() > 1 then
-        dialog.SetButton("next_track", "Next Track")
-        dialog.SetButton("prev_track", "Previous Track")
-    end if
+		skip = FirstOf(GetGlobalVar("AudioConflict"),"0")
+		if skip ="0"
+			dialog.SetButton("preferAudio", "* For Audio [Selected]")
+			dialog.SetButton("preferVideo", "* For Video")
+		else
+			dialog.SetButton("preferAudio", "* For Audio")
+			dialog.SetButton("preferVideo", "* For Video [Selected]")
+		end if
 
-    dialog.SetButton("show", "Go to Now Playing")
-    dialog.SetButton("close", "Close")
+		if m.IsPlaying then
+			dialog.SetButton("pause", "Pause")
+		else if m.IsPaused then
+			dialog.SetButton("resume", "Play")
+		else
+			dialog.SetButton("play", "Play")
+		end if
+		dialog.SetButton("stop", "Stop")
 
-    dialog.HandleButton = audioPlayerMenuHandleButton
-    dialog.ParentScreen = m
-    dialog.Show()
+		if m.Context.Count() > 1 then
+			dialog.SetButton("next_track", "Next Track")
+			dialog.SetButton("prev_track", "Previous Track")
+		end if
+
+		dialog.SetButton("show", "-> Go to Now Playing")
+		sh = GetFullItemMetadata(m.Context[m.CurIndex], false, {})
+    		if sh.isFavorite
+			dialog.SetButton("removefavorite", "Remove as a Favorite")
+		else
+			dialog.SetButton("markfavorite", "Mark as a Favorite")
+		end if
+		dialog.SetButton("close", "Close")
+
+		dialog.HandleButton = audioPlayerMenuHandleButton
+		dialog.ParentScreen = m
+		dialog.Show()
+	end if
 End Sub
 
 Function audioPlayerMenuHandleButton(command, data) As Boolean
@@ -447,6 +494,7 @@ Function audioPlayerMenuHandleButton(command, data) As Boolean
     obj = m.ParentScreen
 
     if command = "play" then
+	debug("PLAYING")
         obj.Play()
     else if command = "pause" then
         obj.Pause()
@@ -463,6 +511,26 @@ Function audioPlayerMenuHandleButton(command, data) As Boolean
         dummyItem.ContentType = "audio"
         dummyItem.Key = "nowplaying"
         GetViewController().CreateScreenForItem(dummyItem, invalid, ["Now Playing"])
+    else if command = "markfavorite" then
+	result = postFavoriteStatus(obj.Context[obj.CurIndex].Id, true)
+	if result then
+		createDialog("Favorites Changed", obj.Context[obj.CurIndex].Title + " has been added to your favorites.", "OK", true)
+	else
+		createDialog("Favorites Error!", obj.Context[obj.CurIndex].Title + " has NOT been added to your favorites.", "OK", true)
+	end if
+    else if command = "removefavorite"
+	result = postFavoriteStatus(obj.Context[obj.CurIndex].Id, false)
+	if result then
+		createDialog("Favorites Changed", obj.Context[obj.CurIndex].Title + " has been removed from your favorites.", "OK", true)
+	else
+		createDialog("Favorites Error!", obj.Context[obj.CurIndex].Title + " has NOT been removed from your favorites.", "OK", true)
+	end if
+    else if command = "preferAudio" then
+	GetGlobalAA().AddReplace("AudioConflict", "0")
+	return true
+    else if command = "preferVideo" then
+	GetGlobalAA().AddReplace("AudioConflict", "1")
+	return true
     else if command = "close" then
         return true
     end if

@@ -23,6 +23,12 @@ Sub photoSetupButtons()
     m.AddButton("Slideshow", "slideshow")
     m.AddButton("Next Photo", "next")
     m.AddButton("Previous Photo", "prev")
+    sh = GetFullItemMetadata(m.item, false, {})
+    if sh.isFavorite
+	m.AddButton("Remove as a Favorite", "removefavorite")
+    else
+	m.AddButton("Mark as a Favorite", "markfavorite")
+    end if
 
     'm.AddRatingButton(m.metadata.UserRating, m.metadata.StarRating, "ratePhoto")
 	
@@ -61,6 +67,25 @@ Function photoHandleMessage(msg) As Boolean
                     m.metadata.ratingKey = 0
                 end if
                 m.Item.server.Rate(m.metadata.ratingKey, m.metadata.mediaContainerIdentifier,rateValue%.ToStr())
+	    else if buttonCommand = "removefavorite" then
+		result = postFavoriteStatus(m.item.Id, false)
+		m.refreshOnActivate = true
+		if result then
+			createDialog("Favorites Changed", FirstOf(m.item.Title,"The Photo")+ " has been removed from your favorites.", "OK", true)
+		else
+			createDialog("Favorites Error!", FirstOf(m.item.Title,"The Photo")+ " has NOT been removed from your favorites.", "OK", true)
+		end if
+		return true
+
+	    else if buttonCommand = "markfavorite" then
+		m.refreshOnActivate = true
+		result = postFavoriteStatus(m.item.Id, true)
+		if result then
+			createDialog("Favorites Changed", FirstOf(m.item.Title,"The Photo")+ " has been added to your favorites.", "OK", true)
+		else
+			createDialog("Favorites Error!", FirstOf(m.item.Title,"The Photo")+ " has NOT been added to your favorites.", "OK", true)
+		end if
+		return true
             else if buttonCommand = "more" then
                 dialog = createBaseDialog()
                 dialog.Title = ""

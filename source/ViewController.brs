@@ -7,26 +7,32 @@
 '*
 
 Function createViewController() As Object
-    controller = CreateObject("roAssociativeArray")
+	controller = CreateObject("roAssociativeArray")
 
-    controller.breadcrumbs = CreateObject("roArray", 10, true)
-    controller.screens = CreateObject("roArray", 10, true)
+	controller.breadcrumbs = CreateObject("roArray", 10, true)
+	controller.screens = CreateObject("roArray", 10, true)
 
-    controller.GlobalMessagePort = CreateObject("roMessagePort")
+	controller.GlobalMessagePort = CreateObject("roMessagePort")
     
 	controller.CreateHomeScreen = vcCreateHomeScreen
 	controller.CreateScreenForItem = vcCreateScreenForItem
 	controller.ShowInitialScreen = vcShowInitialScreen
 	controller.CreateTextInputScreen = vcCreateTextInputScreen
-    controller.CreateEnumInputScreen = vcCreateEnumInputScreen
-    controller.CreateContextMenu = vcCreateContextMenu
+	controller.CreateEnumInputScreen = vcCreateEnumInputScreen
+	controller.CreateContextMenu = vcCreateContextMenu
     
 	controller.CreatePhotoPlayer = vcCreatePhotoPlayer
-    controller.CreateVideoPlayer = vcCreateVideoPlayer
-    controller.CreatePlayerForItem = vcCreatePlayerForItem
-    controller.IsVideoPlaying = vcIsVideoPlaying
+	controller.CreateVideoPlayer = vcCreateVideoPlayer
+	controller.CreatePlayerForItem = vcCreatePlayerForItem
+	controller.IsVideoPlaying = vcIsVideoPlaying
 
-    controller.getDefaultTheme = vcGetDefaultTheme
+ 	theme = FirstOf(RegRead("prefTheme"), "1").ToInt()
+	if theme = 1 then
+		controller.getDefaultTheme = vcGetDefaultTheme
+	else
+		controller.getDefaultTheme = vcGetStockTheme
+	end if
+
 	controller.loadUserTheme = vcLoadUserTheme
 
 	controller.onSignedIn = vcOnSignedIn
@@ -90,7 +96,6 @@ Function createViewController() As Object
     'AppManager().AddInitializer("viewcontroller")
     InitWebServer(controller)
     AudioPlayer()
-
     return controller
 End Function
 
@@ -193,7 +198,7 @@ Sub vcShowInitialScreen()
 End Sub
 
 Sub showLoginScreen(viewController as Object, serverUrl as String)
-	screen = CreateLoginScreen(viewController, serverUrl)
+	screen = CreateLoginScreen(viewController, serverUrl, 0)
 	screen.ScreenName = "Login"
 	viewController.InitializeOtherScreen(screen, ["Please Sign In"])
 	screen.Screen.SetBreadcrumbEnabled(true)
@@ -202,28 +207,8 @@ End Sub
 
 Sub vcOnSignedIn(serverId, serverUrl, localUserId)
 
-	if firstOf(serverId, "") = "" then
-		Debug("Empty serverId passed into OnSignedIn!")
-		return
-	end if
-
-	if firstOf(serverUrl, "") = "" then
-		Debug("Empty serverUrl passed into OnSignedIn!")
-		return
-	end if
-
-	if firstOf(localUserId, "") = "" then
-		Debug("Empty localUserId passed into OnSignedIn!")
-		return
-	end if
-
 	RegWrite("currentServerId", serverId)
-
-	if firstOf(RegRead("currentServerId"), "") <> serverId then
-		Debug("currentServerId doesnt match RegRead result!")
-		return
-	end if
-
+	
 	m.serverUrl = serverUrl
 	postCapabilities()
 	
@@ -238,7 +223,18 @@ Sub vcOnSignedIn(serverId, serverUrl, localUserId)
     GetGlobalAA().AddReplace("user", userProfile)	
 	
 	if firstOf(RegRead("prefRememberUser"), "yes") <> "yes" and ConnectionManager().isLoggedIntoConnect() = false then
+		' do not remember user
 		ConnectionManager().DeleteServerData(serverId, "UserId")
+	else
+		' remember user, announce connected dialog
+		if userprofile <> invalid then
+			username = userprofile.Title
+			if userprofile.IsAdmin then username = username + " *ADMIN*"
+   			 loadingDialog = CreateObject("roOneLineDialog")
+    			loadingDialog.SetTitle("Welcome Back, " + username + "!")
+    			loadingDialog.ShowBusyAnimation()
+    			loadingDialog.Show()
+		end if
 	end if
 	
 	while m.screens.Count() > 0
@@ -246,6 +242,7 @@ Sub vcOnSignedIn(serverId, serverUrl, localUserId)
 	end while
 
     m.Home = m.CreateHomeScreen()
+    if firstOf(RegRead("prefRememberUser"), "yes") = "yes" then loadingDialog.Close()
 
 End Sub
 
@@ -262,59 +259,194 @@ Sub vcLogout()
 End Sub
 
 Function vcCreateHomeScreen()
-    screen = createHomeScreen(m)
-    screen.ScreenName = "Home"
-    m.InitializeOtherScreen(screen, invalid)
-    screen.Screen.SetBreadcrumbEnabled(true)
+	screen = createHomeScreen(m)
+	screen.ScreenName = "Home"
+	m.InitializeOtherScreen(screen, invalid)
+	screen.Screen.SetBreadcrumbEnabled(true)
 
 	screen.refreshBreadcrumb()
 
-    screen.Show()
+	screen.Show()
 
-    return screen
+	return screen
 End Function
 
 Function vcGetDefaultTheme() as Object
 
-    theme = {
+	color1 = firstOf(RegRead("theme_color1"), "#33CCFF")
+	color2 = firstOf(RegRead("theme_color2"), "#75FF75")
+	color3 = firstOf(RegRead("theme_color3"), "#FFFFFF")
+	color4 = firstOf(RegRead("theme_color4"), "#FFFFFF")
+	border = firstOf(RegRead("theme_border"), "1")
+
+	theme = {
 
         '*** HD Styles ****
-        OverhangSliceHD: vcGetDefaultThemeImageUrl("hd-header-slice.png")
-        OverhangLogoHD: vcGetDefaultThemeImageUrl("hd-logo.png")
+        OverhangSliceHD: "pkg:/images/themes/default/hd-header-slice.png"
+        OverhangLogoHD: "pkg:/images/themes/default/hd-logo.png"
         OverhangOffsetHD_X: "80"
         OverhangOffsetHD_Y: "30"
 
-        FilterBannerSliceHD: vcGetDefaultThemeImageUrl("hd-filter-banner.png")
-        FilterBannerActiveHD: vcGetDefaultThemeImageUrl("hd-filter-active.png")
-        FilterBannerInactiveHD: vcGetDefaultThemeImageUrl("hd-filter-inactive.png")
+        FilterBannerSliceHD: "pkg:/images/themes/default/hd-filter-banner.png"
+        FilterBannerActiveHD: "pkg:/images/themes/default/hd-filter-active.png"
+        FilterBannerInactiveHD: "pkg:/images/themes/default/hd-filter-inactive.png"
 
-        GridScreenLogoHD: vcGetDefaultThemeImageUrl("hd-logo.png")
-        GridScreenOverhangSliceHD: vcGetDefaultThemeImageUrl("hd-header-slice.png")
+        GridScreenLogoHD: "pkg:/images/themes/default/hd-logo.png"
+        GridScreenOverhangSliceHD: "pkg:/images/themes/default/hd-header-slice.png"
         GridScreenLogoOffsetHD_X: "80"
         GridScreenLogoOffsetHD_Y: "30"
         GridScreenOverhangHeightHD: "120"
-        'GridScreenFocusBorderHD: vcGetDefaultThemeImageUrl("hd-border-flat-landscape.png")
-        'GridScreenBorderOffsetHD: "(-34,-19)"
+
 
         '*** SD Styles ****
 
-        OverhangSliceSD: vcGetDefaultThemeImageUrl("hd-header-slice.png")
-        OverhangLogoSD: vcGetDefaultThemeImageUrl("sd-logo.png")
+        OverhangSliceSD: "pkg:/images/themes/default/hd-header-slice.png"
+        OverhangLogoSD: "pkg:/images/themes/default/sd-logo.png"
         OverhangOffsetSD_X: "20"
         OverhangOffsetSD_Y: "20"
 
-        FilterBannerSliceSD: vcGetDefaultThemeImageUrl("sd-filter-banner.png")
-        FilterBannerActiveSD: vcGetDefaultThemeImageUrl("sd-filter-active.png")
-        FilterBannerInactiveSD: vcGetDefaultThemeImageUrl("sd-filter-inactive.png")
+        FilterBannerSliceSD: "pkg:/images/themes/default/sd-filter-banner.png"
+        FilterBannerActiveSD: "pkg:/images/themes/default/sd-filter-active.png"
+        FilterBannerInactiveSD: "pkg:/images/themes/default/sd-filter-inactive.png"
 
-        GridScreenLogoSD: vcGetDefaultThemeImageUrl("sd-logo.png")
-        GridScreenOverhangSliceSD: vcGetDefaultThemeImageUrl("hd-header-slice.png")
+        GridScreenLogoSD: "pkg:/images/themes/default/sd-logo.png"
+        GridScreenOverhangSliceSD: "pkg:/images/themes/default/hd-header-slice.png"
         GridScreenLogoOffsetSD_X: "20"
         GridScreenLogoOffsetSD_Y: "20"
         GridScreenOverhangHeightSD: "83"
 		
-		DialogTitleText: "#000000"
-		DialogBodyText: "#333333"
+	DialogTitleText: color4
+	DialogBodyText: color3
+
+        '*** Common Styles ****
+
+        BackgroundColor: "#000000"
+
+        BreadcrumbTextLeft: color2
+        BreadcrumbTextRight: color1
+        BreadcrumbDelimiter: "#ffffff"
+
+	ButtonMenuNormalText: "#333333"
+	ButtonNormalColor: "#333333"
+
+        ParagraphHeaderText: color3
+        ParagraphBodyText: color4
+
+        PosterScreenLine1Text: color2
+        PosterScreenLine2Text: color1
+        EpisodeSynopsisText: color3
+
+        ListItemText: color1
+        ListItemHighlightText: color2
+        ListScreenDescriptionText: color2
+        ListScreenTitleColor: color3
+        ListScreenHeaderText: color4
+
+	SearchHeaderText: color4
+
+        CounterTextLeft: color2
+        CounterTextRight: color1
+        CounterSeparator: "#ffffff"
+
+	ButtonHighlightColor: color1
+	ButtonMenuHighlightText: color2
+	ButtonMenuNormalText: color1
+	ButtonNormalColor: color2
+
+        TextScreenBodyBackgroundColor: "#000000"
+	TextScreenBodyText: color2
+
+        FilterBannerActiveColor: color2
+        FilterBannerInactiveColor: color1
+        FilterBannerSideColor: "#808080"
+
+        GridScreenBackgroundColor: "#000000"
+	GridScreenMessageColor: color3
+        GridScreenListNameColor: "#ffffff"
+	GridScreenRetrievingColor: "#ffffff"
+        GridScreenDescriptionTitleColor: "#000000"
+        'GridScreenDescriptionDateColor: "#ffffff"
+        GridScreenDescriptionSynopsisColor: "#000000"
+        'GridScreenDescriptionRuntimeColor: "#ffffff"
+
+        SpringboardActorColor: color1
+
+        SpringboardAlbumColor: color2
+        'SpringboardAlbumLabel: "#ffffff"
+        SpringboardAlbumLabelColor: color1
+
+        SpringboardAllow6Buttons: "true"
+
+        SpringboardArtistColor: color2
+        'SpringboardArtistLabel: "#ffffff"
+        SpringboardArtistLabelColor: color1
+
+        SpringboardDirectorColor: color1
+        SpringboardDirectorLabelColor: color2
+        'SpringboardDirectorPrefixText: "#ffffff"
+
+        SpringboardGenreColor: color4
+        SpringboardRuntimeColor: color1
+        SpringboardSynopsisColor: color3
+        SpringboardTitleText: color4
+
+	ThemeType: "generic-dark"
+	}
+	' add custom border if selected
+	if border = "1" then
+		theme.AddReplace("GridScreenFocusBorderHD", "pkg:/images/themes/default/hd-border-flat-landscape.png")
+		theme.AddReplace("GridScreenBorderOffsetHD", "(-34,-19)")
+	else
+		theme.AddReplace("GridScreenFocusBorderHD", "")
+		theme.AddReplace("GridScreenBorderOffsetHD", "")
+	end if
+
+	return theme
+	
+End Function
+
+Function vcGetStockTheme() as Object
+	border = firstOf(RegRead("theme_border"), "1")
+
+	theme = {
+
+        '*** HD Styles ****
+        OverhangSliceHD: "pkg:/images/themes/stock/hd-header-slice.png"
+        OverhangLogoHD: "pkg:/images/themes/stock/hd-logo.png"
+        OverhangOffsetHD_X: "80"
+        OverhangOffsetHD_Y: "30"
+
+        FilterBannerSliceHD: "pkg:/images/themes/stock/hd-filter-banner.png"
+        FilterBannerActiveHD: "pkg:/images/themes/stock/hd-filter-active.png"
+        FilterBannerInactiveHD: "pkg:/images/themes/stock/hd-filter-inactive.png"
+
+        GridScreenLogoHD: "pkg:/images/themes/stock/hd-logo.png"
+        GridScreenOverhangSliceHD: "pkg:/images/themes/stock/hd-header-slice.png"
+        GridScreenLogoOffsetHD_X: "80"
+        GridScreenLogoOffsetHD_Y: "30"
+        GridScreenOverhangHeightHD: "120"
+        'GridScreenFocusBorderHD: "pkg:/images/themes/stock/hd-border-flat-landscape.png"
+        'GridScreenBorderOffsetHD: "(-34,-19)"
+
+        '*** SD Styles ****
+
+        OverhangSliceSD: "pkg:/images/themes/stock/hd-header-slice.png"
+        OverhangLogoSD: "pkg:/images/themes/stock/sd-logo.png"
+        OverhangOffsetSD_X: "20"
+        OverhangOffsetSD_Y: "20"
+
+        FilterBannerSliceSD: "pkg:/images/themes/stock/sd-filter-banner.png"
+        FilterBannerActiveSD: "pkg:/images/themes/stock/sd-filter-active.png"
+        FilterBannerInactiveSD: "pkg:/images/themes/stock/sd-filter-inactive.png"
+
+        GridScreenLogoSD: "pkg:/images/themes/stock/sd-logo.png"
+        GridScreenOverhangSliceSD: "pkg:/images/themes/stock/hd-header-slice.png"
+        GridScreenLogoOffsetSD_X: "20"
+        GridScreenLogoOffsetSD_Y: "20"
+        GridScreenOverhangHeightSD: "83"
+		
+	DialogTitleText: "#000000"
+	DialogBodyText: "#333333"
 
         '*** Common Styles ****
 
@@ -324,8 +456,8 @@ Function vcGetDefaultTheme() as Object
         BreadcrumbTextRight: "#eeeeee"
         BreadcrumbDelimiter: "#eeeeee"
 
-		ButtonMenuNormalText: "#333333"
-		ButtonNormalColor: "#333333"
+	ButtonMenuNormalText: "#333333"
+	ButtonNormalColor: "#333333"
 
         ParagraphHeaderText: "#ffffff"
         ParagraphBodyText: "#dfdfdf"
@@ -334,9 +466,9 @@ Function vcGetDefaultTheme() as Object
         PosterScreenLine2Text: "#bbbbbb"
         EpisodeSynopsisText: "#dfdfdf"
 
-        'ListItemText: "#dfdfdf"
-        'ListItemHighlightText: "#ffffff"
-        'ListScreenDescriptionText: "#9a9a9a"
+        ListItemText: "#dfdfdf"
+        ListItemHighlightText: "#ffffff"
+        ListScreenDescriptionText: "#9a9a9a"
         ListScreenTitleColor: "#ffffff"
         ListScreenHeaderText: "#ffffff"
 
@@ -349,10 +481,10 @@ Function vcGetDefaultTheme() as Object
         FilterBannerSideColor: "#cccccc"
 
         GridScreenBackgroundColor: "#181818"
-        'GridScreenListNameColor: "#ffffff"
-        'GridScreenDescriptionTitleColor: "#ffffff"
+        GridScreenListNameColor: "#ffffff"
+        GridScreenDescriptionTitleColor: "#ffffff"
         'GridScreenDescriptionDateColor: "#ffffff"
-        'GridScreenDescriptionSynopsisColor: "#ffffff"
+        GridScreenDescriptionSynopsisColor: "#ffffff"
         'GridScreenDescriptionRuntimeColor: "#ffffff"
 
         SpringboardActorColor: "#9a9a9a"
@@ -377,7 +509,14 @@ Function vcGetDefaultTheme() as Object
         SpringboardTitleText: "#ffffff"
 
         ThemeType: "generic-dark"
-    }
+	}
+	if border = "1" then
+		theme.AddReplace("GridScreenFocusBorderHD", "pkg:/images/themes/stock/hd-border-flat-landscape.png")
+		theme.AddReplace("GridScreenBorderOffsetHD", "(-34,-19)")
+	else
+		theme.AddReplace("GridScreenFocusBorderHD", "")
+		theme.AddReplace("GridScreenBorderOffsetHD", "")
+	end if
 
 	return theme
 	
@@ -410,8 +549,12 @@ End Function
 
 Function vcGetDefaultThemeImageUrl(name as String) as String
 
-	url = "pkg:/images/themes/default/" + name
-	
+	theme = FirstOf(RegRead("prefTheme"), "1").ToInt()
+	if theme = 1 then
+		url = "pkg:/images/themes/default/" + name
+	else
+		url = "pkg:/images/themes/stock/" + name
+	end if
 	return url
 
 End Function
@@ -434,11 +577,11 @@ Sub vcLoadUserTheme()
 		
 	end if
 	
-    ' Set background Color
-    GetGlobalAA().AddReplace("backgroundColor", theme.BackgroundColor)
+	' Set background Color
+	GetGlobalAA().AddReplace("backgroundColor", theme.BackgroundColor)
 
-    app = CreateObject("roAppManager")
-    app.SetTheme( theme )
+	app = CreateObject("roAppManager")
+	app.SetTheme( theme )
 	
 End Sub
 
@@ -527,16 +670,74 @@ Sub vcShow()
         next
     end while
 
-    ' Clean up some references on the way out
-    AudioPlayer().Cleanup()
-    m.Home = invalid
-    m.WebServer = invalid
-    m.Timers.Clear()
-    m.PendingRequests.Clear()
-    m.SocketListeners.Clear()
+    closeChannel = true
 
-    Debug("Finished global message loop")
-	
+    ' Exit confirmation?
+    if FirstOf(RegRead("prefExit"),"1") = "1" then
+	username = ""
+	user = getGlobalVar("user")
+	if user <> invalid then
+		username = user.Title
+		if user.IsAdmin then username = username + " *ADMIN*"
+	end if
+    	port = CreateObject("roMessagePort")
+    	dialog = CreateObject("roMessageDialog")
+    	dialog.SetMessagePort(port) 
+    	dialog.SetTitle("GoodBye, " + username + "?")
+	dialog.SetText( +"Are you sure you want to exit the emby app completely?")
+
+    	dialog.AddButton(1, "Yes")
+    	dialog.AddButton(2, "No")
+    	dialog.EnableBackButton(false)
+    	dialog.Show()
+
+    	closeChannel = false
+
+    	' for now this will be a blocking request. The control has been stopped, so the 
+    	' channel is not listening anymore more onHandle events. 
+    	' pretty basic while loop - button index 2 will cancel the close/exit
+    	while True
+        	dlgMsg = wait(0, dialog.GetMessagePort())
+        	if type(dlgMsg) = "roMessageDialogEvent"
+            		if dlgMsg.isButtonPressed()
+                		if dlgMsg.GetIndex() = 1
+                    			closeChannel = true
+                		end if
+                		exit while
+            		else if dlgMsg.isScreenClosed()
+                		exit while
+            		end if
+		end if
+    	end while 
+    	dialog.Close()
+
+     end if
+
+    ' user chose not to exit, we need to set the profileExit invalid, recreate the 
+    ' homescreen, refresh the homescreen and start control again
+    if NOT closeChannel then 
+       m.Home = m.CreateHomeScreen()
+       m.Home.loader.refreshdata()
+       m.Show()
+    else
+
+    	dialog = CreateObject("roMessageDialog")
+    	dialog.SetTitle("GoodBye " + username + "!")
+	dialog.SetText("                Emby will be here waiting for you to return."+chr(10)+"                        ^_^   Thanks for using Emby!   ^_^" + chr(10) + "                I always knew you were super cool like that." + chr(10) + chr(10) + "                                        Special Thanks:" + chr(10) + "          @shaefurr for his help cleaning up the graphics!!!")
+    	dialog.Show()
+	sleep(3500)
+	dialog.Close()
+
+    	' Clean up some references on the way out
+    	AudioPlayer().Cleanup()
+    	m.Home = invalid
+    	m.WebServer = invalid
+    	m.Timers.Clear()
+    	m.PendingRequests.Clear()
+    	m.SocketListeners.Clear()
+
+    	Debug("Finished global message loop")
+    end if
 End Sub
 
 Function vcGetPort()
@@ -997,12 +1198,13 @@ Function ProcessApplicationSetText() As Boolean
     screen = GetViewController().screens.Peek()
 
     if type(screen.SetText) = "roFunction" then
-	
         value = firstOf(m.request.query["String"], "")
         NowPlayingManager().textFieldContent = value
         screen.SetText(value, true)
-
-	end if
+    else
+	value = firstOf(m.request.query["String"], "")
+        createDialog("Message from the server", strReplace(tostr(value),"+"," "), "OK", true)
+    end if
 
     m.simpleOK("")
     return true
@@ -1197,12 +1399,13 @@ Function vcCreateScreenForItem(context, contextIndex, breadcrumbs, show=true) As
     else
         item = context
     end if
+    item.indexnumber = 1
 
     contentType = item.ContentType
-	itemId = item.Id
+    itemId = item.Id
     viewGroup = item.viewGroup
     if viewGroup = invalid then viewGroup = ""
-
+	debug("viewgroup "+tostr(viewGroup))
     screen = invalid
 
     ' NOTE: We don't support switching between them as a preference, but
@@ -1215,75 +1418,120 @@ Function vcCreateScreenForItem(context, contextIndex, breadcrumbs, show=true) As
 
 	if contentType = "Preferences" then
 	
-        screen = createPreferencesScreen(m)
-        screenName = "Preferences"
+        	screen = createPreferencesScreen(m)
+        	screenName = "Preferences"
 
 	else if contentType = "Search" then
 
-        screen = createSearchScreen(m)
-        screenName = "Search"
+        	screen = createSearchScreen(m)
+        	screenName = "Search"
 
 	else if contentType = "Logout" then
+		GetGlobalAA().AddReplace("peeps", invalid)
+		GetGlobalAA().AddReplace("auths", invalid)
+		peepsnames = FirstOf(getGlobalvar("peepsnames"),"")
+		if peepsnames <> ""
+			sessionId = GetSessionId()
+			if sessionId <> invalid
+				r = CreateObject("roRegex", ",", "")
+				for each id in r.split(peepsnames)
+					result = postAlsoWatchingStatus(id, false, sessionId)
+				end for
+			end if
+		end if
+		GetGlobalAA().AddReplace("peepsnames", invalid)
 
-        m.Logout()
+        	m.Logout()
 
     else if contentType = "ChangeServer" then
+		GetGlobalAA().AddReplace("peeps", invalid)
+		GetGlobalAA().AddReplace("auths", invalid)
+		peepsnames = FirstOf(getGlobalvar("peepsnames"),"")
+		if peepsnames <> ""
+			sessionId = GetSessionId()
+			if sessionId <> invalid
+				r = CreateObject("roRegex", ",", "")
+				for each id in r.split(peepsnames)
+					result = postAlsoWatchingStatus(id, false, sessionId)
+				end for
+			end if
+		end if
+		GetGlobalAA().AddReplace("peepsnames", invalid)
 
-        screen = createServerListScreen(m)
+        	screen = createServerListScreen(m)
 		screen.ScreenName = "Server List"
 		m.InitializeOtherScreen(screen, ["Select Server"])
 		screen.Show()
 
+    else if contentType = "AlsoWatching" then
+
+		screen = CreateLoginScreen(m, GetServerBaseUrl(), 1)
+		screen.ScreenName = "Also Watching"
+		m.InitializeOtherScreen(screen, ["Who Else Is Watching?"])
+		screen.Show()
+
     else if contentType = "Welcome" then
 
-        screen = createServerFirstRunSetupScreen(m)
-        screenName = "Welcome"
+        	screen = createServerFirstRunSetupScreen(m)
+        	screenName = "Welcome"
 
 	else if contentType = "ConnectSignIn" then
 
-        screen = createConnectSignInScreen(m)
-        screenName = "ConnectSignIn"
+        	screen = createConnectSignInScreen(m)
+        	screenName = "ConnectSignIn"
 
 	else if contentType = "TVLibrary" then
 		screen = createTvLibraryScreen(m, itemId)
-        screenName = "TVLibrary"
+        	screenName = "TVLibrary"
 
     else if contentType = "MovieLibrary" then
 		screen = createMovieLibraryScreen(m, itemId)
-        screenName = "MovieLibrary"
+        	screenName = "MovieLibrary"
+
+    else if contentType = "LocalTrailers" then
+		debug("description = " + tostr(item.description))
+		m.TrailerOverview = item.description
+		newscreen = createLocalTrailersScreen(m, item)
+		m.InitializeOtherScreen(newscreen, ["Library Trailers", Item.Title])
+		ScreenName = "All Trailers" + FirstOf(item.Id,"")
+		newscreen.Show()
 
     else if item.MediaType = "Video" or item.MediaType = "Game" or item.MediaType = "Book" or contentType = "ItemPerson" or contentType = "Person" or contentType = "Program" then
 		Debug ("Calling createVideoSpringboardScreen")
 		screen = createVideoSpringboardScreen(context, contextIndex, m)
 		screenName = "VideoSpringboardScreen" + itemId
 
-    else if contentType = "MusicGenre" then
-		screen = createMusicItemSpringboardScreen(context, contextIndex, m)
-		screenName = "MusicGenre " + item.Title
+    'else if contentType = "MusicGenre" then
+		'screen = createMusicItemSpringboardScreen(item, 1, m)
+		'screenName = "MusicGenre " + item.Title
 
     else if contentType = "MovieGenre" then
 		screen = createMovieGenreScreen(m, item.Title)
 		screenName = "MovieGenre " + item.Title
 
-    else if contentType = "Genre" then
-		screen = createGenreSearchScreen(m, item.Title)
-		screenName = "GenreSearch " + item.Title
-
     else if contentType = "MovieAlphabet" then
 		screen = createMovieAlphabetScreen(m, itemId, item.ParentId)
-        screenName = "MovieAlphabet " + itemId
+        	screenName = "MovieAlphabet " + itemId
 
     else if contentType = "TvGenre" then
 		screen = createTvGenreScreen(m, item.Title)
 		screenName = "TvGenre " + item.Title
 
+    else if contentType = "TvStudio" then
+		screen = createTvStudioScreen(m, item.Title)
+		screenName = "TvStudio " + item.Title
+
+    else if contentType = "MovieStudio" then
+		screen = createMovieStudioScreen(m, item.Title)
+		screenName = "MovieStudio " + item.Title
+
     else if contentType = "TvAlphabet" then
 		screen = createTvAlphabetScreen(m, itemId, item.ParentId)
-        screenName = "TvAlphabet " + itemId
+        	screenName = "TvAlphabet " + itemId
 
     else if contentType = "Series" then
 		screen = createTvSeasonsScreen(m, item)
-        screenName = "Series " + itemId
+        	screenName = "Series " + itemId
 
     else if contentType = "LiveTVChannels" then
 		screen = createLiveTvChannelsScreen(m)
@@ -1303,15 +1551,49 @@ Function vcCreateScreenForItem(context, contextIndex, breadcrumbs, show=true) As
 
     else if contentType = "MusicArtist" then
 		screen = createMusicItemSpringboardScreen(context, contextIndex, m)
-        screenName = "MusicArtist " + itemId
+        	screenName = "MusicArtist " + itemId
 
     else if contentType = "MusicAlbum" then
 		screen = createMusicItemSpringboardScreen(context, contextIndex, m)
-        screenName = "MusicAlbum " + itemId
+        	screenName = "MusicAlbum " + itemId
+
+    else if contentType = "MusicGenre" then
+		screen = createMusicItemSpringboardScreen(context, contextIndex, m)
+        	screenName = "MusicGenre " + itemId
+
+    else if contentType = "MusicStudio" then
+		screen = createMusicItemSpringboardScreen(context, contextIndex, m)
+        	screenName = "MusicStudio " + itemId
+
+    else if contentType = "Studio" then
+		screen = createStudioSearchScreen(m, item.Title)
+		screenName = "StudioSearch " + item.Title
+
+    else if contentType = "Genre" then
+		screen = createGenreSearchScreen(m, item.Title)
+		screenName = "GenreSearch " + item.Title
 		
     else if contentType = "Playlist" and item.MediaType = "Audio" then
 		screen = createMusicSongsScreen(m, item)
-        screenName = "Playlist " + itemId
+        	screenName = "Playlist " + itemId
+
+    else if contentType = "MusicFavorite" then
+		debug("item.key = " + tostr(item.key) + "item.MediaType = " + tostr(item.MediaType))
+		screen = createMusicSongsScreen(m, item)
+        	screenName = "Favorite Songs"
+		breadcrumbs = ["", "Favorite Songs"]
+
+    else if contentType = "RecentlyPlayed" then
+		debug("item.key = " + tostr(item.key) + "item.MediaType = " + tostr(item.MediaType))
+		screen = createMusicSongsScreen(m, item)
+        	screenName = "Recently Played Songs"
+		breadcrumbs = ["", "Recently Played Songs"]
+
+    else if contentType = "MostPlayed" then
+		debug("item.key = " + tostr(item.key) + "item.MediaType = " + tostr(item.MediaType))
+		screen = createMusicSongsScreen(m, item)
+        	screenName = "Most Played Songs"
+		breadcrumbs = ["", "Frequently Played Songs"]
 		
     else if contentType = "MusicAlbumAlphabet" then
 		screen = createMusicAlbumsAlphabetScreen(m, itemId, item.ParentId)
@@ -1322,8 +1604,8 @@ Function vcCreateScreenForItem(context, contextIndex, breadcrumbs, show=true) As
 		screenName = "MusicArtistAlphabet " + itemId
 
     else if contentType = "Channel" or contentType = "ChannelFolderItem" then
-        screen = createChannelScreen(m, item)
-        screenName = "Channel " + itemId
+        	screen = createChannelScreen(m, item)
+        	screenName = "Channel " + itemId
 
     else if contentType = "MediaFolder" or contentType = "PhotoFolder" or contentType = "Folder" or contentType = "BoxSet" or item.IsFolder = true then
 		screen = createFolderScreen(m, item)
@@ -1344,39 +1626,39 @@ Function vcCreateScreenForItem(context, contextIndex, breadcrumbs, show=true) As
 		screenName = "RecordingGroup " + itemId
 
     else if item.key = "nowplaying" or contentType = "NowPlaying" then
-        if AudioPlayer().ContextScreenID = m.screens.Peek().ScreenID then
-            screen = invalid
-        else
-            AudioPlayer().ContextScreenID = m.nextScreenId
-            screen = createAudioSpringboardScreen(AudioPlayer().Context, AudioPlayer().CurIndex, m)
-            screenName = "Now Playing"
+		if AudioPlayer().ContextScreenID = m.screens.Peek().ScreenID then
+			screen = invalid
+		else
+			AudioPlayer().ContextScreenID = m.nextScreenId
+			screen = createAudioSpringboardScreen(AudioPlayer().Context, AudioPlayer().CurIndex, m)
+			screenName = "Now Playing"
 			breadcrumbs = [screenName, ""]
-        end if
-        if screen = invalid then return invalid
+		end if
+		if screen = invalid then return invalid
     else if item.MediaType = "Audio" then
-        screen = createAudioSpringboardScreen(context, contextIndex, m)
-        if screen = invalid then return invalid
-        screenName = "Audio Springboard"
+		screen = createAudioSpringboardScreen(context, contextIndex, m)
+		if screen = invalid then return invalid
+		screenName = "Audio Springboard"
     else if contentType = "keyboard" then
-        screen = createKeyboardScreen(m, item)
-        screenName = "Keyboard"
+		screen = createKeyboardScreen(m, item)
+		screenName = "Keyboard"
     else if contentType = "search" then
-        screen = createSearchScreen(item, m)
-        screenName = "Search"
+		screen = createSearchScreen(item, m)
+		screenName = "Search"
     else if item.searchTerm <> invalid then
 
-        screen = createSearchResultsScreen(m, item.searchTerm)
-        screenName = "Search Results"
+		screen = createSearchResultsScreen(m, item.searchTerm)
+		screenName = "Search Results"
 
     else if item.settings = "1"
-        screen = createSettingsScreen(item, m)
-        screenName = "Settings"
+		screen = createSettingsScreen(item, m)
+		screenName = "Settings"
 
-	else
+    else
 		Debug ("Encountered unknown type in CreateScreenForItem")
     end if
 
-	if screen <> invalid then
+    if screen <> invalid then
 		if screenName = invalid then
 			screenName = type(screen.Screen) + " " + firstOf(contentType, "unknown")
 		end if
@@ -1388,7 +1670,6 @@ Function vcCreateScreenForItem(context, contextIndex, breadcrumbs, show=true) As
 		m.PushScreen(screen)
 
 		if show then screen.Show()
-
 		return screen
 	end If
 
@@ -1456,18 +1737,18 @@ End Function
 Function vcCreateVideoPlayer(context, contextIndex, playOptions, show=true)
     
 	' Stop any background audio first
-    AudioPlayer().Stop()
+	AudioPlayer().Stop()
 
-    screen = createVideoPlayerScreen(context, contextIndex, playOptions, m)
-    screen.ScreenName = "Video Player"
+	screen = createVideoPlayerScreen(context, contextIndex, playOptions, m)
+	screen.ScreenName = "Video Player"
 
-    m.AddBreadcrumbs(screen, invalid)
+	m.AddBreadcrumbs(screen, invalid)
 	m.UpdateScreenProperties(screen)
-    m.PushScreen(screen)
+	m.PushScreen(screen)
 
-    if show then screen.Show()
+	if show then screen.Show()
 
-    return screen
+	return screen
 End Function
 
 Function GetContextForPlayback(context, contextIndex) as Object
@@ -1588,7 +1869,7 @@ Function vcCreatePlayerForItem(context, contextIndex, playOptions)
     if item.MediaType = "Photo" then
         return m.CreatePhotoPlayer(context, contextIndex)
     else if item.MediaType = "Audio" then
-        AudioPlayer().Stop()
+        'AudioPlayer().Stop()
         screen = m.CreateScreenForItem(context, contextIndex, invalid)
 		
 		if screen <> invalid and screen.playFromIndex <> invalid then screen.playFromIndex(contextIndex)
@@ -1707,17 +1988,22 @@ Sub vcUpdateScreenProperties(screen)
     else if screenType = "roSearchScreen" then
         if enableBreadcrumbs then
             screen.Screen.SetBreadcrumbText(bread1, bread2)
-        end if
+        end if	
     else if screenType = "roListScreen" then
-	
-		' SetBreadcrumbText is not available on legacy devices
-		if bread2 <> invalid then screen.Screen.SetTitle(bread2)
-		
+        if bread2 <> invalid
+            ' SetBreadcrumbText is not available on legacy devices
+            if left(firstOf(getGlobalVar("rokuModelNumber"), 0),2).toInt() < 31 
+                screen.Screen.SetTitle(bread2)
+            else
+                screen.Screen.SetBreadcrumbText(bread2,"")
+            end if
+        end if
     else if screenType = "roListScreen" OR screenType = "roKeyboardScreen" OR screenType = "roParagraphScreen" then
         if enableBreadcrumbs then
             screen.Screen.SetTitle(bread2)
         end if
     else
+
         Debug("Not sure what to do with breadcrumbs on screen type: " + tostr(screenType))
     end if
 End Sub

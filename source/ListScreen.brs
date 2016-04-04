@@ -76,7 +76,7 @@ End Function
 '**********************************************************
 
 Function SetListHeader(text As String) As Integer
-    m.screen.SetHeader(text)
+    m.screen.SetHeader(left(text,40))
 
     Return 0
 End Function

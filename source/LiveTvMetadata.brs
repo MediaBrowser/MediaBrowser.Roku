@@ -17,9 +17,9 @@ Function getLiveTvInfo() As Object
 		metaData = ParseJSON(fixedResponse)
 
         return metaData
-
-	end if
-
+    else
+	createDialog("Response Error!", "No Live TV Info Found. (invalid)", "OK", true)
+    end if
     return invalid
 End Function
 
@@ -57,8 +57,9 @@ Function getLiveTvChannel(id as String) As Object
 		metaData = ParseJSON(fixedResponse)
 
         return getMetadataFromServerItem(metaData, 0, "two-row-flat-landscape-custom")
-
-	end if
+    else
+	createDialog("Response Error!", "No Live TV Channel Found. (invalid)", "OK", true)
+    end if
 
     return invalid
 End Function
@@ -72,6 +73,7 @@ Function parseLiveTvProgramsResponse(response) As Object
         jsonObj     = ParseJSON(fixedResponse)
 
         if jsonObj = invalid
+	    createDialog("JSON Error!", "Error while parsing JSON response for Live TV What's On", "OK", true)
             Debug("Error while parsing JSON response for Live TV What's On")
             return invalid
         end if
@@ -88,6 +90,8 @@ Function parseLiveTvProgramsResponse(response) As Object
             Items: contentList
             TotalCount: totalRecordCount
         }
+    else
+	createDialog("Response Error!", "No Live TV Programs Found. (invalid)", "OK", true)
     end if
 
     return invalid
@@ -121,7 +125,8 @@ Function getLiveTvProgramMetadata(programId As String) As Object
         i = ParseJSON(fixedResponse)
 
         return getMetadataFromServerItem(i, 0, "two-row-flat-landscape-custom", "autosize")
-
+    else
+	createDialog("Response Error!", "No Live TV Program metadata Found. (invalid)", "OK", true)
     end if
 
     return invalid
@@ -140,6 +145,7 @@ Function getLiveTvPrograms(channelId As String, filters = invalid As Object) As 
     query = {
         UserId: getGlobalVar("user").Id
         ChannelIds: channelId
+	SortBy: "StartDate"
     }
 
     ' Filter/Sort Query
@@ -167,6 +173,7 @@ Function parseLiveTvRecordingsResponse(response, mode = "") As Object
         jsonObj     = ParseJSON(fixedResponse)
 
         if jsonObj = invalid
+	    createDialog("JSON Error!", "Error while parsing JSON response for Live TV Recordings", "OK", true)
             return invalid
         end if
 
@@ -182,6 +189,8 @@ Function parseLiveTvRecordingsResponse(response, mode = "") As Object
             Items: contentList
             TotalCount: totalRecordCount
         }
+    else
+	createDialog("Response Error!", "No Live TV Recordings Found. (invalid)", "OK", true)
     end if
 
     return invalid
@@ -222,7 +231,8 @@ Function getLiveTvRecording(recordingId As String) As Object
         i = ParseJSON(fixedResponse)
 
         return getLiveTvRecordingFromServerResponse(i)
-
+    else
+	createDialog("Response Error!", "No Live TV Recording Found. (invalid)", "OK", true)
     end if
 
     return invalid
@@ -242,6 +252,7 @@ Function parseLiveTvRecordingGroupResponse(response) As Object
         jsonObj     = ParseJSON(fixedResponse)
 
         if jsonObj = invalid
+		createDialog("JSON Error!", "Error while parsing JSON response for Live TV Recording Group", "OK", true)
             return invalid
         end if
 
@@ -267,6 +278,8 @@ Function parseLiveTvRecordingGroupResponse(response) As Object
             Items: contentList
             TotalCount: totalRecordCount
         }
+    else
+	createDialog("Response Error!", "No Live TV Recording Group Found. (invalid)", "OK", true)
     end if
 
     return invalid
@@ -285,6 +298,7 @@ Function parseLiveTvChannelsResult(response) As Object
         jsonObj     = ParseJSON(fixedResponse)
 
         if jsonObj = invalid
+	    createDialog("JSON Error!", "Error while parsing JSON response for Live TV Channels", "OK", true)
             return invalid
         end if
 
@@ -302,6 +316,7 @@ Function parseLiveTvChannelsResult(response) As Object
             TotalCount: totalRecordCount
         }
     else
+	createDialog("Live TV Error!", "Error getting live tv channels.", "OK", true)
         Debug("Error getting live tv channels")
     end if
 
