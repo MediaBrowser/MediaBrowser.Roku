@@ -275,15 +275,16 @@ function tryConnect(url, timeout) as Object
         metaData = ParseJSON(response)
 
         if metaData = invalid
+	    createDialog("MetaData Error!", "Error Parsing Server Info.", "OK", true)
             Debug("Error Parsing Server Info")
             return invalid
         end if
 
 		return metaData
     else
+        createDialog("Response Error!", "Failed to get Server Info. (invalid)", "OK", true)
         Debug("Failed to get Server Info")
     end if
-
     return invalid
 
 end function
@@ -382,12 +383,14 @@ function getConnectUserFromServer(id, accessToken) as Object
         metaData = ParseJSON(response)
 
         if metaData = invalid
+	    createDialog("MetaData Error!", "Error Parsing connect user.", "OK", true)
             Debug("Error Parsing connect user")
             return invalid
         end if
 
 		return metaData
     else
+	createDialog("Response Error!", "Failed to get connect user. (invalid)", "OK", true)
         Debug("Failed to get connect user")
     end if
 
