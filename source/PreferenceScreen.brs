@@ -184,9 +184,23 @@ Function handleItemOptionsScreenMessage(msg) as Boolean
 			list = m.contentArray
 
             prefSelected = list[index].Id
-
-            ' Save New Preference
-            RegWrite(m.itemId, prefSelected)
+            
+            ' only allow administrators to disable interaction timeout
+	    if m.ItemId = "prefinteraction"
+		if prefSelected = "0" then
+			user = getGlobalVar("user")
+			if user.isAdmin then
+				RegWrite(m.itemId, prefSelected)
+			else
+				createDialog("Permission Error!", "You must be marked as an administrative user in order to disable the Interaction Timeout. Please see an administrator.", "OK", true)
+			end if
+		else
+			RegWrite(m.itemId, prefSelected)
+		end if
+	    else
+		' Save New Preference
+		RegWrite(m.itemId, prefSelected)
+	    end if
 
 			m.Screen.Close()
 
@@ -642,6 +656,11 @@ Function GetPreferenceInteraction() as Object
         {
             Title: "1 hour",
             Id: "3600",
+            IsDefault: false
+        },
+        {
+            Title: "Disabled",
+            Id: "0",
             IsDefault: false
         }
     ]
