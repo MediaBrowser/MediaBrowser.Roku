@@ -53,6 +53,7 @@ Function handlePreferencesScreenMessage(msg) as Boolean
 					GetPreferenceTVThemeMusicRepeat,
 					GetPreferenceRememberUser,
 					GetPreferenceExit,
+					GetPreferenceInteraction,
 					GetPreferenceEnhancedImages,
 					GetPreferenceMediaIndicators,
 					GetPreferenceShowClock,
@@ -312,6 +313,16 @@ Function GetPreferenceList() as Object
             ContentType: "pref",
 			PrefType: "list",
             ShortDescriptionLine1: "Confirm with a dialog before exiting the app?",
+            HDBackgroundImageUrl: viewController.getThemeImageUrl("hd-preferences-lg.png"),
+            SDBackgroundImageUrl: viewController.getThemeImageUrl("sd-preferences-lg.png")
+        },
+        {
+            Title: "Interaction Timeout: " + GetSelectedPreference(GetPreferenceInteraction(), RegRead("prefinteraction")),
+            ShortTitle: "Interaction Timeout?",
+            ID: "prefinteraction",
+            ContentType: "pref",
+			PrefType: "list",
+            ShortDescriptionLine1: "How long to play videos before interaction is required?",
             HDBackgroundImageUrl: viewController.getThemeImageUrl("hd-preferences-lg.png"),
             SDBackgroundImageUrl: viewController.getThemeImageUrl("sd-preferences-lg.png")
         },
@@ -600,6 +611,38 @@ Function GetPreferenceExit() as Object
             Title: "No [default]",
             Id: "0",
             IsDefault: true
+        }
+    ]
+
+    return prefOptions
+End Function
+
+Function GetPreferenceInteraction() as Object
+    prefOptions = [
+        {
+            Title: "5 hours [default]",
+            Id: "18000",
+            IsDefault: true
+        },
+        {
+            Title: "4 hours",
+            Id: "14400",
+            IsDefault: false
+        },
+        {
+            Title: "3 hours",
+            Id: "10800",
+            IsDefault: false
+        },
+        {
+            Title: "2 hours",
+            Id: "7200",
+            IsDefault: false
+        },
+        {
+            Title: "1 hour",
+            Id: "3600",
+            IsDefault: false
         }
     ]
 
