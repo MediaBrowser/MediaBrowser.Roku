@@ -436,7 +436,7 @@ Function videoPlayerHandleMessage(msg) As Boolean
         end if
     end if
     ' check keep alive timer expiration
-    if m.keepAliveTimer <> invalid
+    if m.keepAliveTimer <> invalid and m.interactionTimeout <> 0
 		if m.KeepAliveTimer.TotalSeconds() > m.interactionTimeout
 			if ShowKeepAliveDialog() = 2
 				m.keepAliveTimer = invalid
