@@ -442,25 +442,19 @@ Function ShowKeepAliveDialog() As Integer
 	dialog.SetTitle("Action Required!")
 	dialog.UpdateText("Are you still here?"+chr(10)+"Are you awake?"+chr(10)+chr(10)+"You have 60 seconds to reply or the video player closes.")
 	dialog.AddButton(1, "Yes, I am here!")
-	dialog.EnableBackButton(true)
+	dialog.EnableBackButton(false)
 	dialog.Show()
 	m.KeepAliveDialog = dialog
 	m.TimeoutTimer = CreateObject("roTimespan")
 	m.TimeoutTimer.mark()
-	a1 = 0
+	reply = 1
 	While True
 		dlgMsg = wait(1000, dialog.GetMessagePort())
 		If type(dlgMsg) = "roMessageDialogEvent"
 			if dlgMsg.isButtonPressed()
 				if dlgMsg.GetIndex() = 1
-					reply = 1
 					exit while
 				end if
-			end if
-		else if dlgMsg <> invalid
-			if dlgMsg.isScreenClosed()
-				reply = 1
-				exit while
 			end if
 		end if
 		if m.TimeoutTimer.TotalSeconds() > 60
