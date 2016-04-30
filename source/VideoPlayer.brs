@@ -89,9 +89,6 @@ Function createVideoPlayerScreen(context, contextIndex, playOptions, viewControl
     obj.playState = "buffering"
     obj.bufferingTimer = createTimer()
 	obj.LastProgressReportTime = 0
-    ' initialize keep alive timer and set interaction timeout
-    obj.keepAliveTimer = CreateObject("roTimespan")
-    obj.keepAliveTimer.mark()
     obj.interactionTimeout = FirstOf(regread("prefinteraction"), "18000").ToInt()
 	
     obj.ShowPlaybackError = videoPlayerShowPlaybackError
@@ -321,7 +318,6 @@ Function videoPlayerHandleMessage(msg) As Boolean
 				m.changeStream = false
                 m.Show()
             else
-                m.keepAliveTimer = invalid
                 ' video may close and dialog is still open if so close dialog
                 if m.KeepAliveDialog <> invalid
                 	m.KeepAliveDialog.close()
@@ -337,8 +333,6 @@ Function videoPlayerHandleMessage(msg) As Boolean
 
         else if msg.isButtonPressed()
             print "Button pressed: "; msg.GetIndex(); " " msg.GetData()
-            ' update keep alive timer
-            m.keepAliveTimer.mark()
 
         else if msg.isStreamStarted() then
             Debug("MediaPlayer::playVideo::VideoScreenEvent::isStreamStarted: position -> " + tostr(m.lastPosition))
@@ -379,8 +373,6 @@ Function videoPlayerHandleMessage(msg) As Boolean
         else if msg.isPaused() then
             Debug("MediaPlayer::playVideo::VideoScreenEvent::isPaused: position -> " + tostr(m.lastPosition))
             m.playState = "paused"
-            ' update keep alive timer
-            m.keepAliveTimer.mark()
 			m.progressTimer.Active = true
 			m.ReportPlayback("progress", true)
             m.UpdateNowPlaying("progress")
@@ -388,8 +380,6 @@ Function videoPlayerHandleMessage(msg) As Boolean
         else if msg.isResumed() then
             Debug("MediaPlayer::playVideo::VideoScreenEvent::isResumed")
             m.playState = "playing"
-            ' update keep alive timer
-            m.keepAliveTimer.mark()
 			m.progressTimer.Active = true
 			m.ReportPlayback("progress", true)
             m.UpdateNowPlaying()
@@ -435,17 +425,12 @@ Function videoPlayerHandleMessage(msg) As Boolean
             'Debug("Unknown event: " + tostr(msg.GetType()) + " msg: " + tostr(msg.GetMessage()))
         end if
     end if
-    ' check keep alive timer expiration
-    if m.keepAliveTimer <> invalid and m.interactionTimeout <> 0
-		if m.KeepAliveTimer.TotalSeconds() > m.interactionTimeout
-			if ShowKeepAliveDialog() = 2
-				m.keepAliveTimer = invalid
-				m.playState = "stopped"
-				m.stop()
-			else
-				m.keepAliveTimer.Mark()
-			end if
-		end if
+    ' check time since last key press
+    if m.InteractionTimeout <> 0 and TimeSinceLastKeyPress() > m.interactionTimeout
+	if ShowKeepAliveDialog() = 2
+		m.playState = "stopped"
+		m.stop()
+	end if
     end if
     return handled
 End Function
