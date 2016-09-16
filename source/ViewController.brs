@@ -245,6 +245,10 @@ Sub vcOnSignedIn(serverId, serverUrl, localUserId)
 		m.PopScreen(m.screens[m.screens.Count() - 1])
 	end while
 
+	Debug("Saving server info for screensaver")
+	WriteAsciiFile("tmp:/EmbyServerURL.txt", serverUrl)
+	WriteAsciiFile("tmp:/EmbyUserID.txt", localUserId)
+		
     m.Home = m.CreateHomeScreen()
 
 End Sub

@@ -8,7 +8,38 @@ Sub RunScreenSaver()
 
     if mode <> "disabled" then
         initGlobals()
-        DisplayScreenSaver(mode)
+		itemTypes = []
+		useVertical = false
+		
+		serverURL = ReadAsciiFile("tmp:/EmbyServerURL.txt")
+		userID = ReadAsciiFile("tmp:/EmbyUserID.txt")
+		
+		if ( (serverURL <> "") AND (userID <> "") )
+			if (rnd(3) = 1)
+				itemTypes = ["Series", "Movie"]
+			else
+				itemTypes = ["Movie", "Series"]
+			end if	
+			
+			if (rnd(3) = 1) then useVertical = true
+			
+			lisScreen = CreatelibraryImageScreensaver(serverURL, userID)
+			
+			if (lisScreen.Init(itemTypes[0], useVertical))
+				lisScreen.Go()
+			else
+				Debug("Not enough images loaded for " + lisScreen.ItemType + " screensaver")
+				if (lisScreen.Init(itemTypes[1], useVertical))
+					lisScreen.Go() 
+				else
+					Debug("Not enough images loaded for " + lisScreen.ItemType + " screensaver")
+					DisplayScreenSaver(mode)
+				end if
+			end if
+		else
+			Debug("User not logged in.  Using generic screensaver.")
+			DisplayScreenSaver(mode)
+		end if	
     else
         Debug("Deferring to system screensaver")
     end if
