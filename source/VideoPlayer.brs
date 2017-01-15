@@ -84,6 +84,8 @@ Function createVideoPlayerScreen(context, contextIndex, playOptions, viewControl
     obj.playbackError = false
 	obj.changeStream = false
     obj.underrunCount = 0
+    obj.interactionTimeout = FirstOf(regread("prefinteraction"), "18000").ToInt()
+    obj.shown = invalid
     obj.timelineTimer = invalid
     obj.progressTimer = invalid
     obj.playState = "buffering"
@@ -418,7 +420,54 @@ Function videoPlayerHandleMessage(msg) As Boolean
         end if
     end if
 
+    if m.InteractionTimeout <> 0 and NOT m.shown <> invalid
+	if TimeSinceLastKeyPress() > m.interactionTimeout
+		if ShowKeepAliveDialog() = 2
+			m.shown = true
+			m.playState = "stopped"
+			m.stop()
+		end if
+	end if
+    end if
+
     return handled
+End Function
+
+Function TimeSinceLastKeyPress() as integer
+    device = CreateObject("roDeviceInfo")
+    return device.TimeSinceLastKeyPress()
+End Function
+
+Function ShowKeepAliveDialog() As Integer
+	port = CreateObject("roMessagePort")
+	dialog = CreateObject("roMessageDialog")
+	dialog.SetMessagePort(port)
+	dialog.SetTitle("Action Required!")
+	dialog.UpdateText("Are you still here?"+chr(10)+"Are you awake?"+chr(10)+chr(10)+"You have 60 seconds to reply or the video player closes.")
+	dialog.AddButton(1, "Yes, I am here!")
+	dialog.EnableBackButton(false)
+	dialog.Show()
+	m.KeepAliveDialog = dialog
+	m.TimeoutTimer = CreateObject("roTimespan")
+	m.TimeoutTimer.mark()
+	reply = 1
+	While True
+		dlgMsg = wait(1000, dialog.GetMessagePort())
+		If type(dlgMsg) = "roMessageDialogEvent"
+			if dlgMsg.isButtonPressed()
+				if dlgMsg.GetIndex() = 1
+					exit while
+				end if
+			end if
+		end if
+		if m.TimeoutTimer.TotalSeconds() > 60
+			reply = 2
+			exit while
+		end if
+		dialog.UpdateText("Are you still here?"+chr(10)+"Are you awake?"+chr(10)+chr(10)+"You have "+ tostr(60 - m.TimeoutTimer.TotalSeconds()) + " seconds to reply or the video player closes.")		
+	end while
+	dialog.close()
+	return reply
 End Function
 
 Sub videoPlayerReportPlayback(action as String, forceReport = false)
