@@ -179,10 +179,8 @@ Sub audioPlayerReportPlayback(action as String)
 End Sub
 
 Sub audioPlayerCleanup()
-    m.Stop()
-    m.timelineTimer = invalid
-    fn = function() :m.AudioPlayer = invalid :end function
-    fn()
+	m.reportPlayback("stop")
+	m.Stop()
 End Sub
 
 Sub audioPlayerPlay()
