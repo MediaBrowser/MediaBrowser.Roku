@@ -496,15 +496,26 @@ Function getMetadataFromServerItem(i as Object, imageType as Integer, primaryIma
             end if
         end if
 
+
         ' Use Actors Area for Series / Season / Episode
         metaData.Actors = episodeInfo
+	metaData.Categories = CreateObject("roArray", 3, true)
+	if i.SeriesStudio <> invalid then metadata.Categories.Push(i.SeriesStudio)
+	local = CreateObject("roDateTime")
+	    if metaData.ReleaseDate <> Invalid and metaData.ReleaseDate <> "" then
+		stamp = metaData.ReleaseDate + " 00:00:00"
+		local.FromISO8601String(stamp)
+	    	out = local.GetWeekday()
+	    	if i.AirTime <> invalid and i.AirTime <> "" then out = out + " @ " + i.AirTime
+	    	metadata.Categories.Push(out)
+	    end if
 
 	else
 		FillActorsFromItem(metaData, i)
+		FillCategoriesFromGenres(metaData, i)
 	end if
-	
+
 	FillChaptersFromItem(metaData, i)
-	FillCategoriesFromGenres(metaData, i)
 	
 	if i.MediaType = "Photo" then
 		FillPhotoInfo(metaData, i)
