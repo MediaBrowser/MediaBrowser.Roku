@@ -1042,13 +1042,14 @@ Function ProcessApplicationSetText() As Boolean
 
     screen = GetViewController().screens.Peek()
 
+    value = firstOf(m.request.query["String"], "")
     if type(screen.SetText) = "roFunction" then
-	
-        value = firstOf(m.request.query["String"], "")
         NowPlayingManager().textFieldContent = value
-        screen.SetText(value, true)
-
-	end if
+    else
+	' pop up a dialog for server messages on
+        ' screens which lack the settext function
+        createDialog("Message from the server", strReplace(tostr(value),"+"," "), "OK", true)
+    end if
 
     m.simpleOK("")
     return true
