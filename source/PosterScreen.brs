@@ -149,15 +149,26 @@ Function showPosterScreen() As Integer
         m.Loader.Listener = m
 
         m.Screen.SetListNames(m.names)
-
 		focusedIndex = 0
-		if container.focusedIndex <> invalid then focusedIndex = container.focusedIndex
-        m.Screen.SetFocusedList(focusedIndex)
+		if container.focusedIndex <> invalid then
+			focusedIndex = container.focusedIndex
+		end if
+		focusedIndexItem = 0
+		if container.focusedIndexItem <> invalid then
+			focusedIndexItem = container.focusedIndexItem
+		end if
+		m.Screen.SetFocusedList(focusedIndex)
 
         for index = 0 to keys.Count() - 1
             status = CreateObject("roAssociativeArray")
             status.listDisplayMode = invalid
             status.focusedIndex = 0
+	    if index = focusedIndex
+		status.focusedIndexItem = FocusedIndexItem - 1
+		if status.focusedIndexItem < 0 then status.focusedIndexItem = 0
+	    else
+		status.focusedIndexItem = 0
+	    end if
             status.content = []
             status.lastUpdatedSize = 0
             m.contentArray[index] = status
@@ -192,6 +203,7 @@ Function showPosterScreen() As Integer
         end if
 
         status.focusedIndex = 0
+        status.focusedIndexItem = 0
         status.lastUpdatedSize = status.content.Count()
 
         m.contentArray[0] = status
@@ -234,7 +246,7 @@ Sub posterShowContentList(index)
         m.closeOnActivate = true
     else
         m.Screen.Show()
-        m.Screen.SetFocusedListItem(status.focusedIndex)
+        m.Screen.SetFocusedListItem(status.focusedIndexItem)
     end if
 End Sub
 
