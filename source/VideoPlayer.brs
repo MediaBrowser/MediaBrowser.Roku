@@ -384,8 +384,8 @@ Function videoPlayerHandleMessage(msg) As Boolean
 			
 			if m.changeStream = false then 
 				m.playState = "stopped"
-				m.ReportPlayback("stop")
-				m.UpdateNowPlaying()
+				'm.ReportPlayback("stop")
+				'm.UpdateNowPlaying()
 			else
 				if m.IsTranscoded then m.StopTranscoding()
 			end if
@@ -397,8 +397,8 @@ Function videoPlayerHandleMessage(msg) As Boolean
             Debug("MediaPlayer::playVideo::VideoScreenEvent::isFullResult: position -> " + tostr(m.lastPosition))
             m.progressTimer.Active = false
 			m.playState = "stopped"
-			m.ReportPlayback("stop")
-            m.UpdateNowPlaying()
+			'm.ReportPlayback("stop")
+			'm.UpdateNowPlaying()
 			m.isPlayed = true
 
         else if msg.GetType() = 31 then
