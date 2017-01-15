@@ -3,25 +3,112 @@
 '**********************************************************
 Function createChannelScreen(viewController as Object, item As Object) As Object
 
-    names = [item.Title]
+    settingsPrefix = "channel"
+    'm.settingsPrefix = settingsPrefix
+    contextMenuType = "folders"
+    'm.contextMenuType = contextMenuType
+
+    names = [item.Title + " (* Options)"]
     keys = [item.Id]
   
     loader = CreateObject("roAssociativeArray")
+    loader.settingsPrefix = settingsPrefix
+    loader.contentType = item.contentType
     loader.getUrl = getChannelScreenUrl
     loader.parsePagedResult = parseChannelScreenResult
     loader.channel = item
     
-    screen = createPaginatedGridScreen(viewController, names, keys, loader, "two-row-flat-landscape-custom", 8, 20)
+    imageType      = (firstOf(RegUserRead("channelImageType"), "0")).ToInt()
+
+    if imageType = 0 then
+		gridStyle = "mixed-aspect-ratio"
+    Else
+		gridStyle = "two-row-flat-landscape-custom"
+    End If
+
+    screen = createPaginatedGridScreen(viewController, names, keys, loader, gridstyle)
 
     screen.displayDescription = 0
+
+    screen.baseActivate = screen.Activate
+    screen.Activate = ChannelScreenActivate
+
+    screen.recreateOnActivate = true
+
+    screen.settingsPrefix = settingsPrefix
+
+    screen.contextMenuType = contextMenuType
+	
+    if imageType = 0 then
+        screen.displayDescription = 1
+    else
+        screen.displayDescription = (firstOf(RegUserRead("channelDescription"), "0")).ToInt()
+    end if
+
+    screen.createContextMenu = ChannelScreenCreateContextMenu
 
     return screen
 
 End Function
 
-Function parseChannelScreenResult(row as Integer, id as string, startIndex as Integer, json as String) as Object
+Sub ChannelScreenActivate(priorScreen)
 
-    return parseItemsResponse(json, 0, "mixed-aspect-ratio-portrait", "autosize")
+    imageType      = (firstOf(RegUserRead("channelImageType"), "0")).ToInt()
+	
+	if imageType = 0 then
+		displayDescription = 1
+	else
+		displayDescription = (firstOf(RegUserRead("channelDescription"), "0")).ToInt()
+	end if
+	
+    if imageType = 0 then
+		gridStyle = "mixed-aspect-ratio"
+    Else
+		gridStyle = "two-row-flat-landscape-custom"
+    End If
+
+	m.baseActivate(priorScreen)
+
+	if gridStyle <> m.gridStyle or displayDescription <> m.displayDescription then
+		m.displayDescription = displayDescription
+		m.gridStyle = gridStyle
+		m.DestroyAndRecreate()
+	end if
+
+End Sub
+
+Function getChannelItemsQuery(settingsPrefix as String, contentType as String) as Object
+
+    filterBy       = (firstOf(RegUserRead("channelFilterBy"), "0")).ToInt()
+    sortBy         = (firstOf(RegUserRead("channelSortBy"), "0")).ToInt()
+    sortOrder      = (firstOf(RegUserRead("channelSortOrder"), "0")).ToInt()
+
+    query = {}
+
+    if filterBy = 1
+        query.AddReplace("Filters", "IsUnPlayed")
+    else if filterBy = 2
+        query.AddReplace("Filters", "IsPlayed")
+    end if
+
+	' Just take the default sort order for collections
+	if contentType <> "BoxSet" then
+		if sortBy = 1
+			query.AddReplace("SortBy", "DateCreated,SortName")
+		else if sortBy = 2
+			query.AddReplace("SortBy", "DatePlayed,SortName")
+		else if sortBy = 3
+			query.AddReplace("SortBy", "PremiereDate,SortName")
+		else
+			query.AddReplace("SortBy", "SortName")
+		end if
+
+		if sortOrder = 1
+			query.AddReplace("SortOrder", "Descending")
+		end if
+	end if
+
+	return query
 
 End Function
 
@@ -33,7 +120,7 @@ Function getChannelScreenUrl(row as Integer, id as String) as String
     url = GetServerBaseUrl()
 
     ' Query
-    query = {}
+    'query = getChannelItemsQuery(m.settingsPrefix, m.contentType)
 
     if row = 0
         if channel.ChannelId <> invalid
@@ -46,6 +133,12 @@ Function getChannelScreenUrl(row as Integer, id as String) as String
         query = {
             fields: "Overview,PrimaryImageAspectRatio"
         }
+
+	filters = getChannelItemsQuery(m.settingsPrefix, m.contentType)
+
+    	if filters <> invalid
+        	query = AddToQuery(query, filters)
+    	end if
 
         if channel.ChannelId <> invalid
             q = { folderid: channel.Id }
@@ -60,5 +153,30 @@ Function getChannelScreenUrl(row as Integer, id as String) as String
     print "Channel url: " + url
 
     return url
+
+End Function
+
+Function parseChannelScreenResult(row as Integer, id as string, startIndex as Integer, json as String) as Object
+
+    imageType      = (firstOf(RegUserRead("channelImageType"), "0")).ToInt()
+
+    return parseItemsResponse(json, imagetype, "mixed-aspect-ratio-portrait", "autosize")
+
+End Function
+
+Function ChannelScreenCreateContextMenu()
+	
+	if m.contextMenuType <> invalid then
+	
+		options = {
+			settingsPrefix: "channel"
+			sortOptions: ["Name", "Date Added", "Date Played", "Release Date"]
+			filterOptions: ["None", "Unplayed", "Played"]
+			showSortOrder: true
+		}
+		createContextMenuDialog(options)
+	end if
+
+	return true
 
 End Function
