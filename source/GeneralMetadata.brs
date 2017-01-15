@@ -718,17 +718,14 @@ End Function
 Function getContentType(i as Object, mode as String) as String
 
 	if i.Type = "CollectionFolder" Then
-
 		return "MediaFolder"
-
 	else if i.Type = "Genre" and mode = "moviegenre"
 		return "MovieGenre"
-
 	else if i.Type = "Genre" and mode = "tvgenre"
 		return "TvGenre"
-
+	else if i.Type = "Studio" and mode = "tvstudio"
+		return "TvStudio"
 	end If
-
 	return i.Type
 
 End Function
