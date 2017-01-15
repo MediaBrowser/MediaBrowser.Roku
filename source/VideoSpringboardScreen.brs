@@ -19,7 +19,7 @@ Function createVideoSpringboardScreen(context, index, viewController) As Object
     obj.closeOnActivate = false
     obj.Activate = videoActivate
 
-	obj.DeleteLiveTvRecording = springboardDeleteRecording
+	obj.DeleteItem = springboardDeleteItem
 	obj.CancelLiveTvTimer = springboardCancelTimer
 	obj.RecordLiveTvProgram = springboardRecordProgram
 	obj.ShowStreamsDialog = springboardShowStreamsDialog
@@ -315,7 +315,9 @@ Function handleVideoSpringboardScreenMessage(msg) As Boolean
 				m.CancelLiveTvTimer(item)
 
             else if buttonCommand = "delete" then
-				m.DeleteLiveTvRecording(item)
+                springboardDeleteItem(item)
+                m.ViewController.PopScreen(m.ViewController.screens[m.ViewController.screens.Count() - 1])
+                return true
 
             else if buttonCommand = "streams" then
                 m.ShowStreamsDialog(item)
@@ -761,19 +763,18 @@ Function showCancelLiveTvTimerDialog()
 	return showContextViewMenuYesNoDialog("Confirm Action", "Are you sure you wish to cancel this recording?")
 End Function
 
-
 '******************************************************
 ' Delete Recording Dialog
 '******************************************************
 
-Function showDeleteRecordingDialog()
-	return showContextViewMenuYesNoDialog("Confirm Action", "Are you sure you wish to delete this recording?")
+Function showDeleteRecordingDialog(item)
+	return showContextViewMenuYesNoDialog("Confirm Action", "Are you sure you wish to permanently delete " +item.Title+" from your library?")
 End Function
 
-Sub springboardDeleteRecording (item)
-	if showDeleteRecordingDialog() = "1" then
-        deleteLiveTvRecording(item.Id)
-		m.Screen.Close()
+Sub springboardDeleteItem(item)
+	if showDeleteRecordingDialog(item) = "1" then
+        	deleteLiveTvRecording(item)
+		m.ViewController.PopScreen(m.ViewController.screens[m.ViewController.screens.Count() - 1])
 	end if
 End Sub
 
