@@ -164,7 +164,7 @@ Function getHomeScreenRowUrl(row as Integer, id as String) as String
 			
 			query = {
 				ItemLimit: "20"
-				CategoryLimit: "1"
+				CategoryLimit: "6"
 				fields: "PrimaryImageAspectRatio",
 				ImageTypeLimit: "1"
 			}
@@ -611,11 +611,29 @@ Function GetBaseMovieButtons(viewController as Object, movieToggle as Integer, p
         switchButton[0].HDPosterUrl = viewController.getThemeImageUrl("hd-toggle-1.jpg")
         switchButton[0].SDPosterUrl = viewController.getThemeImageUrl("hd-toggle-1.jpg")
         buttons.Append( switchButton )
+	
+	rec = movieResponse.recommendationtype
+
+        if rec = "SimilarToRecentlyPlayed"
+		rectype = "You Watched"
+        else if rec = "SimilarToLikedItem"
+		rectype = "You Like"
+	else if rec = "HasDirectorFromRecentlyPlayed"
+		rectype = "Watched Director"
+	else if rec = "HasLikedDirector"
+		rectype = "Liked Director"
+	else if rec = "HasActorFromRecentlyPlayed"
+		rectype = "Watched Actor"
+	else if rec = "HasLikedActor"
+		rectype = "Liked Actor"
+	else
+		rectype = "No Reason"
+	end if
 
         suggestedButton = [
                 {
                     ContentType: "MovieRefreshSuggested"
-                    ShortDescriptionLine1: "Similar To"
+                    ShortDescriptionLine1: rectype
                     ShortDescriptionLine2: movieResponse.BaselineItemName
                     HDPosterUrl: viewController.getThemeImageUrl("hd-similar-to.jpg")
                     SDPosterUrl: viewController.getThemeImageUrl("hd-similar-to.jpg")

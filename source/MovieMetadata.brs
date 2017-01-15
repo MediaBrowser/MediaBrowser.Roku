@@ -15,8 +15,8 @@ Function parseSuggestedMoviesResponse(response) As Object
             return invalid
         end if
 
-        ' Only Grab 1 Category
-        category = result[0]
+		' Only Grab 1 Category
+		category = result[rnd(result.count())-1]
 		
 		' Results are empty
 		if category = invalid then
