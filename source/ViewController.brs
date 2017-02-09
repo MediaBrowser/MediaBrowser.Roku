@@ -270,8 +270,12 @@ Function vcCreateHomeScreen()
 	screen.refreshBreadcrumb()
 
     screen.Show()
-
-    CheckDisplayBetaHint()
+   
+    ' only display beta dialog for devices 7.5 or higher
+    versionArr = getGlobalVar("rokuVersion")
+    If CheckMinimumVersion(versionArr, [7, 5]) then
+        CheckDisplayBetaHint()
+    end if
     
     return screen
 End Function
@@ -1839,9 +1843,10 @@ Sub CheckDisplayBetaHint()
     lastSeconds = last.AsSeconds()
     
     diff = nowSeconds - lastSeconds
-    
-    If diff < 7 * 24 * 60 * 60 Then
+    Apps = QueryApps()
+    If diff < 7 * 24 * 60 * 60 or AppExists(Apps, "120610") Then
         ' Message has already been displayed during the last 7 days
+	' or App has already been installed. No need to display dialog.
         return
     End If
     
@@ -1860,7 +1865,7 @@ Sub CheckDisplayBetaHint()
 
     message = message.split("|")
     title = FirstOf(message[0], "Try our fresh new app!")
-    msg = FirstOf(message[1], "Preview the upcoming much improved Emby Roku app now!  A beautifully redesigned interface that allows you to view your Emby content on your Roku like never before.  Try it now by installing the private preview channel at http://emby.media/roku")
+    msg = FirstOf(message[1], "Preview the upcoming much improved Emby Roku app now! Â A beautifully redesigned interface that allows you to view your Emby content on your Roku like never before. Â Try it now by installing the private preview channel at http://emby.media/roku")
     
     port = CreateObject("roMessagePort")
     dialog = CreateObject("roMessageDialog")
@@ -1868,7 +1873,8 @@ Sub CheckDisplayBetaHint()
     dialog.SetTitle(title)
     dialog.AddStaticText(msg)
     
-    dialog.AddButton(1, "OK")
+    dialog.AddButton(1, "Install the app")
+    dialog.AddButton(2, "Cancel")
     dialog.EnableBackButton(false)
     dialog.Show()
 
@@ -1881,8 +1887,11 @@ Sub CheckDisplayBetaHint()
         dlgMsg = wait(0, dialog.GetMessagePort())
         if type(dlgMsg) = "roMessageDialogEvent"
                 if dlgMsg.isButtonPressed()
-                    if dlgMsg.GetIndex() = 1
-                            closeChannel = true
+                    msg = dlgMsg.GetIndex()
+		    if msg = 1
+                            GetNewBeta()
+		    else if msg = 2
+		            closeChannel = true
                     end if
                     exit while
                 else if dlgMsg.isScreenClosed()
@@ -1894,3 +1903,35 @@ Sub CheckDisplayBetaHint()
 
 
 End Sub
+
+Sub GetNewBeta()
+    connection = createObject("roDeviceInfo").GetConnectionInfo()
+    ip = connection.lookup("ip")
+    Debug("Sending message to roku to install emby preview app.")		
+    ' URL
+    url = "http://"+ip+":8060/install/120610"
+    ' Prepare Request
+    request = HttpRequest(url)
+    ' Execute Request
+    response = request.PostFromStringWithTimeout("", 5)
+End Sub
+
+Function QueryApps() As String
+	connection = createObject("roDeviceInfo").GetConnectionInfo()
+	ip = connection.lookup("ip")
+	' URL
+	url = "http://"+ip+":8060/query/apps"
+	print url
+	' Prepare Request
+	request = HttpRequest(url)
+	' Execute Request
+	response = request.GetToStringWithTimeout(10)
+	return response
+End Function
+
+Function AppExists(App as String, Id As String) as Boolean
+	regex = "<app id="+chr(34)+Id+chr(34)
+	r = createObject("roRegex",regex,"i")
+	if r.ismatch(App) then return true
+	return false
+End Function
