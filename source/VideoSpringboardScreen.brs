@@ -48,7 +48,6 @@ Sub videoSetupButtons()
     m.ClearButtons()
 
 	video = m.metadata
-
     if video.ContentType = "Program" And video.PlayAccess = "Full"
 	
         if canPlayProgram(video)
@@ -56,10 +55,10 @@ Sub videoSetupButtons()
         end if
 
         if video.TimerId <> invalid
-			m.AddButton("Cancel recording", "cancelrecording")
+			m.AddButton("Cancel Recording", "cancelrecording")
 			
         else if canRecordProgram(video)
-			m.AddButton("Schedule recording", "record")
+			m.AddButton("Schedule Recording", "record")
         end if
 
     else if (video.LocationType <> "Virtual" or video.ContentType = "TvChannel") And video.PlayAccess = "Full"
@@ -67,8 +66,8 @@ Sub videoSetupButtons()
 		' This screen is also used for books and games, so don't show a play button
 		if video.MediaType = "Video" then
 			if video.BookmarkPosition <> 0 then
-		
-				m.AddButton("Resume", "resume")
+				time = tostr(formatTime(video.BookmarkPosition))
+				m.AddButton("Resume from " + time, "resume")
 				m.AddButton("Play from beginning", "play")
 			else
 				m.AddButton("Play", "play")
@@ -105,17 +104,15 @@ Sub videoSetupButtons()
 		m.subtitleStreams = subtitleStreams
 
     end if
-
-    ' Check for special features
-    if video.People <> invalid and video.People.Count() > 0
+        ' Check for people
+        if video.People <> invalid and video.People.Count() > 0
 
 		if video.MediaType = "Video" then
 			m.AddButton("Cast & Crew", "cast")
 		else
 			m.AddButton("People", "people")
 		end If
-
-    end if
+        end if
 	
 	if video.ContentType = "Person"
 		m.AddButton("Filmography", "filmography")
@@ -192,8 +189,8 @@ End Function
 Sub videoGetMediaDetails(content)
 
     m.metadata = GetFullItemMetadata(content, false, {})
-	
-	streamInfo = m.metadata.StreamInfo
+	streaminfo = invalid
+	if m.metadata <> invalid then streamInfo = m.metadata.StreamInfo
 	
 	if streamInfo <> invalid then
 		m.PlayOptions.SubtitleStreamIndex = streamInfo.SubtitleStreamIndex
@@ -314,9 +311,6 @@ Function handleVideoSpringboardScreenMessage(msg) As Boolean
                 
 				m.CancelLiveTvTimer(item)
 
-            else if buttonCommand = "delete" then
-				m.DeleteLiveTvRecording(item)
-
             else if buttonCommand = "streams" then
                 m.ShowStreamsDialog(item)
 
@@ -325,23 +319,20 @@ Function handleVideoSpringboardScreenMessage(msg) As Boolean
 
             else if buttonCommand = "filmography" then
                 m.ShowFilmography(item)
-				
+    	    else if buttonCommand = "cast" then
+        	newScreen = createPeopleScreen(m.ViewController, item)
+		newScreen.ScreenName = "People" + itemId
+        	m.ViewController.InitializeOtherScreen(newScreen, [item.Title, "Cast & Crew"])
+		newScreen.Show()
+        	return true
+    	    else if buttonCommand = "people" then
+        	newScreen = createPeopleScreen(m.ViewController, item)
+		newScreen.ScreenName = "People" + itemId
+        	m.ViewController.InitializeOtherScreen(newScreen, [item.Title, "People"])
+		newScreen.Show()
+        	return true				
             else if buttonCommand = "more" then
                 m.ShowMoreDialog(item)
-
-			else if buttonCommand = "cast" then
-				newScreen = createPeopleScreen(m.ViewController, item)
-				newScreen.ScreenName = "People" + itemId
-				m.ViewController.InitializeOtherScreen(newScreen, [item.Title, "Cast & Crew"])
-				newScreen.Show()
-				return true
-
-			else if buttonCommand = "people" then
-				newScreen = createPeopleScreen(m.ViewController, item)
-				newScreen.ScreenName = "People" + itemId
-				m.ViewController.InitializeOtherScreen(newScreen, [item.Title, "People"])
-				newScreen.Show()
-				return true
 
 			' rewster: handle the back button
 			else if buttonCommand = "back" then
@@ -523,32 +514,105 @@ Sub springboardShowFilmography(item)
 	newScreen.Show()
 End Sub
 
-Sub springboardShowMoreDialog(item)
+Sub createFavoritesDialog(item)
 
+    dlg = createBaseDialog()
+    dlg.Title = "Favorites Options"
+    dlg.openParentDialog = true
+
+    if item.ParentIndexNumber <> invalid then
+      if item.IsFavorite then
+        dlg.SetButton("removefavorite", "Remove Season " + tostr(item.ParentIndexNumber) + ", Episode " + tostr(item.IndexNumber) + " as a Favorite")
+      else
+        dlg.SetButton("markfavorite", "Mark Season " + tostr(item.ParentIndexNumber) + ", Episode " + tostr(item.IndexNumber) + " as a Favorite")
+      end if
+    else
+      if item.IsFavorite then
+	dlg.SetButton("removefavorite", "Remove this as a Favorite")
+      else
+	dlg.SetButton("markfavorite", "Mark this as a Favorite")
+      end if
+    end if
+
+    if item.SeriesName <> invalid then
+	dlg.SetButton("markfavoriteseries", "Mark " + tostr(item.SeriesName) + " as a Favorite")
+	dlg.SetButton("removefavoriteseries", "Remove " + tostr(item.SeriesName) + " as a Favorite")
+    end if
+
+	dlg.item = item
+	dlg.parentScreen = m.parentScreen
+
+	dlg.HandleButton = handleFavoritesOptionsButton
+
+    dlg.SetButton("close", "Close this Window")
+    dlg.Show()
+End Sub
+
+Function handleFavoritesOptionsButton(command, data) As Boolean
+	item = m.item
+	itemId = item.Id
+	screen = m.parentScreen
+
+    if command = "removefavorite" then
+		'screen.refreshOnActivate = true
+		postFavoriteStatus(itemId, false)
+        return true
+    else if command = "markfavorite" then
+		'screen.refreshOnActivate = true
+		postFavoriteStatus(itemId, true)
+        return true
+    else if command = "removefavoriteseason" then
+		'screen.refreshOnActivate = true
+		postFavoriteStatus(item.SeasonId, false)
+        return true
+    else if command = "markfavoriteseason" then
+		'screen.refreshOnActivate = true
+		postFavoriteStatus(item.SeasonId, true)
+        return true
+    else if command = "removefavoriteseries" then
+		'screen.refreshOnActivate = true
+		postFavoriteStatus(item.SeriesId, false)
+        return true
+    else if command = "markfavoriteseries" then
+		'screen.refreshOnActivate = true
+		postFavoriteStatus(item.SeriesId, true)
+        return true
+    else if command = "close" then
+		m.Screen.Close()
+        return true
+    end if
+    return false
+End Function
+
+Sub springboardShowMoreDialog(item)
     dlg = createBaseDialog()
     dlg.Title = "More Options"
 
 	if item.MediaType = "Video" or item.MediaType = "Game" then 
 		if item.Watched
-			dlg.SetButton("markunplayed", "Mark unplayed")
+			dlg.SetButton("markunplayed", "Mark this as Unplayed")
 		else
-			dlg.SetButton("markplayed", "Mark played")
+			dlg.SetButton("markplayed", "Mark this as Played")
 		end if
 	end if
-
-    if item.IsFavorite
-        dlg.SetButton("removefavorite", "Remove favorite")
+    if item.SeriesName <> invalid then
+    	dlg.SetButton("favorites", "Change Favorites")
     else
-        dlg.SetButton("markfavorite", "Mark as favorite")
+	if item.IsFavorite
+		dlg.SetButton("removefavorite", "Remove this as a Favorite")
+	else
+		dlg.SetButton("markfavorite", "Mark this as a Favorite")
+	end if
     end if
 
-    if item.CanDelete = true
-       dlg.SetButton("delete", "Delete")
+    ' delete
+    if item.CanDelete Then
+        dlg.SetButton("delete", "Delete this Item")
     end if
 
     ' Check for special features
     if item.SpecialFeatureCount <> invalid and item.SpecialFeatureCount > 0
-        dlg.SetButton("specials", "Special features")
+        dlg.SetButton("specials", "Special Features")
     end if
 
 	dlg.item = item
@@ -556,7 +620,7 @@ Sub springboardShowMoreDialog(item)
 
 	dlg.HandleButton = handleMoreOptionsButton
 
-    dlg.SetButton("close", "Close")
+    dlg.SetButton("close", "Close this Window")
     dlg.Show()
 
 End Sub
@@ -567,21 +631,23 @@ Function handleMoreOptionsButton(command, data) As Boolean
 	itemId = item.Id
 	screen = m.parentScreen
 
-    if command = "markunplayed" then
+    if command = "favorites" then
+                createFavoritesDialog(item)
+    else if command = "markunplayed" then
 		screen.refreshOnActivate = true
 		postWatchedStatus(itemId, false)
         return true
-    else if command = "markplayed" then
+    else if command = "markfavorite" then
 		screen.refreshOnActivate = true
-		postWatchedStatus(itemId, true)
+		postFavoriteStatus(itemId, true)
         return true
     else if command = "removefavorite" then
 		screen.refreshOnActivate = true
 		postFavoriteStatus(itemId, false)
         return true
-    else if command = "markfavorite" then
+    else if command = "markplayed" then
 		screen.refreshOnActivate = true
-		postFavoriteStatus(itemId, true)
+		postWatchedStatus(itemId, true)
         return true
     else if command = "specials" then
         newScreen = createSpecialFeaturesScreen(m.ViewController, item)
@@ -589,21 +655,8 @@ Function handleMoreOptionsButton(command, data) As Boolean
         m.ViewController.InitializeOtherScreen(newScreen, [item.Title, "Special Features"])
 		newScreen.Show()
         return true
-    else if command = "cast" then
-        newScreen = createPeopleScreen(m.ViewController, item)
-		newScreen.ScreenName = "People" + itemId
-        m.ViewController.InitializeOtherScreen(newScreen, [item.Title, "Cast & Crew"])
-		newScreen.Show()
-        return true
-    else if command = "people" then
-        newScreen = createPeopleScreen(m.ViewController, item)
-		newScreen.ScreenName = "People" + itemId
-        m.ViewController.InitializeOtherScreen(newScreen, [item.Title, "People"])
-		newScreen.Show()
-        return true
     else if command = "delete" then
-        m.parentScreen.DeleteLiveTvRecording(item)
-        return true
+		m.DeleteLiveTvRecording(item)
     else if command = "close" then
 		m.Screen.Close()
         return true
@@ -640,7 +693,7 @@ Sub createAudioAndSubtitleDialog(audioStreams, subtitleStreams, playOptions)
 
 		dlg.SetButton("audio", "Audio")
 		dlg.SetButton("subtitles", "Subtitles")
-		dlg.SetButton("close", "Close")
+		dlg.SetButton("close", "Close this Window")
 
 		dlg.Show(true)
 
@@ -711,7 +764,7 @@ Sub createStreamSelectionDialog(streamType, audioStreams, subtitleStreams, playO
 
 	end For
 
-    dlg.SetButton("close", "Cancel")
+    dlg.SetButton("close", "Close this Window")
     dlg.Show(true)
 End Sub
 
@@ -767,12 +820,12 @@ End Function
 '******************************************************
 
 Function showDeleteRecordingDialog()
-	return showContextViewMenuYesNoDialog("Confirm Action", "Are you sure you wish to delete this recording?")
+	return showContextViewMenuYesNoDialog("Confirm Action", "Are you sure you wish to permanently delete this item?")
 End Function
 
 Sub springboardDeleteRecording (item)
 	if showDeleteRecordingDialog() = "1" then
-        deleteLiveTvRecording(item.Id)
+        	deleteLiveTvRecording(item.ContentType, item.Id)
 		m.Screen.Close()
 	end if
 End Sub
