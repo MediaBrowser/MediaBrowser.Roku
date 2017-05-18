@@ -94,11 +94,6 @@ Function getTvLibraryRowScreenUrl(row as Integer, id as String) as String
 	if row = 0
 		' Tv genres
 		url = url  + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?recursive=true"
-
-		query.AddReplace("IncludeItemTypes", "Series")
-		query.AddReplace("fields", "Overview")
-		query.AddReplace("ParentId", m.parentId)
-		query.AddReplace("ImageTypeLimit", "1")
 		
 		if filterBy = 1
 			query.AddReplace("SeriesStatus", "Continuing")
@@ -122,49 +117,51 @@ Function getTvLibraryRowScreenUrl(row as Integer, id as String) as String
 			query.AddReplace("SortOrder", "Descending")
 		end if
 
+		query.AddReplace("fields", "Overview")
+		query.AddReplace("ParentId", m.parentId)
+		query.AddReplace("IncludeItemTypes", "Series")
 
 	else if row = 1
 		' Alphabet - should never get in here
 		
 	else if row = 2
 		' Tv next up
-		url = url  + "/Shows/NextUp?fields=Overview"
-		query.AddReplace("userid", getGlobalVar("user").Id)
+		url = url  + "/Shows/NextUp?fields=PrimaryImageAspectRatio" 'Overview
 		query.AddReplace("SortBy", "SortName")
+		query.AddReplace("userid", getGlobalVar("user").Id)
 		query.AddReplace("ParentId", m.parentId)
 		query.AddReplace("ImageTypeLimit", "1")
 	else if row = 3
 		' Tv Favorites Series
-		url = url + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?includeitemtypes=Series"
-		query.AddReplace("recursive", "true")
-		query.AddReplace("fields", "PrimaryImageAspectRatio")
+		url = url + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?recursive=true"
+		query.AddReplace("filters", "IsFavorite")
 		query.AddReplace("sortby", "SortName")
 		query.AddReplace("sortorder", "Ascending")
-		query.AddReplace("filters", "IsFavorite")
+		query.AddReplace("fields", "PrimaryImageAspectRatio")
 		query.AddReplace("ImageTypeLimit", "1")
+		query.AddReplace("IncludeItemTypes", "Series")
 	else if row = 4
 		' Tv Favorite Episodes
-		url = url + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?includeitemtypes=Episode"
-		query.AddReplace("recursive", "true")
-		query.AddReplace("fields", "PrimaryImage")
+		url = url + "/Users/" + HttpEncode(getGlobalVar("user").Id) + "/Items?recursive=true"
+		query.AddReplace("filters", "IsFavorite")
 		query.AddReplace("sortby", "SortName")
 		query.AddReplace("sortorder", "Ascending")
-		query.AddReplace("filters", "IsFavorite")
+		query.AddReplace("fields", "PrimaryImage")
 		query.AddReplace("ImageTypeLimit", "1")
+		query.AddReplace("includeitemtypese", "Episode")
 	else if row = 5
 		' Upcoming Tv Shows
 		url = url + "/Shows/Upcoming?limit=100"
 		query.AddReplace("fields", "Overview")
 		query.AddReplace("userid", getGlobalVar("user").Id)
-		'query.AddReplace("SortBy", "SortName")
 		'query.AddReplace("ParentId", m.parentId)
 		query.AddReplace("ImageTypeLimit", "1")
 	else if row = 6
 		' Tv genres
 		url = url  + "/Genres?recursive=true"
+		query.AddReplace("SortBy", "SortName")
 		query.AddReplace("userid", getGlobalVar("user").Id)
 		query.AddReplace("IncludeItemTypes", "Series")
-		query.AddReplace("SortBy", "SortName")
 		query.AddReplace("ParentId", m.parentId)
 	end If
 
