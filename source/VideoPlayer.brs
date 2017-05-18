@@ -89,7 +89,8 @@ Function createVideoPlayerScreen(context, contextIndex, playOptions, viewControl
     obj.playState = "buffering"
     obj.bufferingTimer = createTimer()
 	obj.LastProgressReportTime = 0
-
+    obj.interactionTimeout = FirstOf(regread("prefinteraction"), "18000").ToInt()
+	
     obj.ShowPlaybackError = videoPlayerShowPlaybackError
     obj.UpdateNowPlaying = videoPlayerUpdateNowPlaying
 
@@ -317,6 +318,13 @@ Function videoPlayerHandleMessage(msg) As Boolean
 				m.changeStream = false
                 m.Show()
             else
+                ' video may close and dialog is still open if so close dialog
+                if m.KeepAliveDialog <> invalid
+                	m.KeepAliveDialog.close()
+                end if
+                if m.TimeoutTimer <> invalid
+                	m.TimeoutTimer = invalid
+                end if
                 m.ViewController.PopScreen(m)
             end if
 
@@ -417,8 +425,47 @@ Function videoPlayerHandleMessage(msg) As Boolean
             'Debug("Unknown event: " + tostr(msg.GetType()) + " msg: " + tostr(msg.GetMessage()))
         end if
     end if
-
+    ' check time since last key press
+    if m.InteractionTimeout <> 0 and TimeSinceLastKeyPress() > m.interactionTimeout
+	if ShowKeepAliveDialog() = 2
+		m.playState = "stopped"
+		m.stop()
+	end if
+    end if
     return handled
+End Function
+
+Function ShowKeepAliveDialog() As Integer
+	port = CreateObject("roMessagePort")
+	dialog = CreateObject("roMessageDialog")
+	dialog.SetMessagePort(port)
+	dialog.SetTitle("Action Required!")
+	dialog.UpdateText("Are you still here?"+chr(10)+"Are you awake?"+chr(10)+chr(10)+"You have 60 seconds to reply or the video player closes.")
+	dialog.AddButton(1, "Yes, I am here!")
+	dialog.EnableBackButton(false)
+	dialog.Show()
+	m.KeepAliveDialog = dialog
+	m.TimeoutTimer = CreateObject("roTimespan")
+	m.TimeoutTimer.mark()
+	reply = 1
+	While True
+		dlgMsg = wait(1000, dialog.GetMessagePort())
+		If type(dlgMsg) = "roMessageDialogEvent"
+			if dlgMsg.isButtonPressed()
+				if dlgMsg.GetIndex() = 1
+					exit while
+				end if
+			end if
+		end if
+		if m.TimeoutTimer.TotalSeconds() > 60
+			m.TimeoutTimer = invalid
+			reply = 2
+			exit while
+		end if
+		dialog.UpdateText("Are you still here?"+chr(10)+"Are you awake?"+chr(10)+chr(10)+"You have "+ tostr(60 - m.TimeoutTimer.TotalSeconds()) + " seconds to reply or the video player closes.")		
+	end while
+	dialog.close()
+	return reply
 End Function
 
 Sub videoPlayerReportPlayback(action as String, forceReport = false)

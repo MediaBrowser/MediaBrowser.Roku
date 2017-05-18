@@ -53,6 +53,7 @@ Function handlePreferencesScreenMessage(msg) as Boolean
 					GetPreferenceTVThemeMusicRepeat,
 					GetPreferenceRememberUser,
 					GetPreferenceExit,
+					GetPreferenceInteraction,
 					GetPreferenceEnhancedImages,
 					GetPreferenceMediaIndicators,
 					GetPreferenceShowClock,
@@ -183,9 +184,23 @@ Function handleItemOptionsScreenMessage(msg) as Boolean
 			list = m.contentArray
 
             prefSelected = list[index].Id
-
-            ' Save New Preference
-            RegWrite(m.itemId, prefSelected)
+            
+            ' only allow administrators to disable interaction timeout
+	    if m.ItemId = "prefinteraction"
+		if prefSelected = "0" then
+			user = getGlobalVar("user")
+			if user.isAdmin then
+				RegWrite(m.itemId, prefSelected)
+			else
+				createDialog("Permission Error!", "You must be marked as an administrative user in order to disable the Interaction Timeout. Please see an administrator.", "OK", true)
+			end if
+		else
+			RegWrite(m.itemId, prefSelected)
+		end if
+	    else
+		' Save New Preference
+		RegWrite(m.itemId, prefSelected)
+	    end if
 
 			m.Screen.Close()
 
@@ -312,6 +327,16 @@ Function GetPreferenceList() as Object
             ContentType: "pref",
 			PrefType: "list",
             ShortDescriptionLine1: "Confirm with a dialog before exiting the app?",
+            HDBackgroundImageUrl: viewController.getThemeImageUrl("hd-preferences-lg.png"),
+            SDBackgroundImageUrl: viewController.getThemeImageUrl("sd-preferences-lg.png")
+        },
+        {
+            Title: "Interaction Timeout: " + GetSelectedPreference(GetPreferenceInteraction(), RegRead("prefinteraction")),
+            ShortTitle: "Interaction Timeout?",
+            ID: "prefinteraction",
+            ContentType: "pref",
+			PrefType: "list",
+            ShortDescriptionLine1: "How long to play videos before interaction is required?",
             HDBackgroundImageUrl: viewController.getThemeImageUrl("hd-preferences-lg.png"),
             SDBackgroundImageUrl: viewController.getThemeImageUrl("sd-preferences-lg.png")
         },
@@ -600,6 +625,43 @@ Function GetPreferenceExit() as Object
             Title: "No [default]",
             Id: "0",
             IsDefault: true
+        }
+    ]
+
+    return prefOptions
+End Function
+
+Function GetPreferenceInteraction() as Object
+    prefOptions = [
+        {
+            Title: "5 hours [default]",
+            Id: "18000",
+            IsDefault: true
+        },
+        {
+            Title: "4 hours",
+            Id: "14400",
+            IsDefault: false
+        },
+        {
+            Title: "3 hours",
+            Id: "10800",
+            IsDefault: false
+        },
+        {
+            Title: "2 hours",
+            Id: "7200",
+            IsDefault: false
+        },
+        {
+            Title: "1 hour",
+            Id: "3600",
+            IsDefault: false
+        },
+        {
+            Title: "Disabled",
+            Id: "0",
+            IsDefault: false
         }
     ]
 
