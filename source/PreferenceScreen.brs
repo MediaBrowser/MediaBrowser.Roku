@@ -183,11 +183,28 @@ Function handleItemOptionsScreenMessage(msg) as Boolean
 			list = m.contentArray
 
             prefSelected = list[index].Id
+            
+	    ' remember the user?
+	    if m.ItemId = "prefRememberUser"
+			if prefSelected = "no" then
+				' no means we have to logout, pop a dialog
+				if showRememberDialog() = "1" then
+					' yes, close all open screens in the stack
+					' and logout
+					RegWrite(m.itemId, prefSelected)
+					while m.ViewController.screens.Count() > 0
+						m.ViewController.PopScreen(m.ViewController.screens[m.ViewController.screens.Count() - 1])
+					end while
+					m.viewcontroller.Logout()
+				end if
+			else
+				RegWrite(m.itemId, prefSelected)
+			end if
+	     else
+			RegWrite(m.itemId, prefSelected)
+	     end if
 
-            ' Save New Preference
-            RegWrite(m.itemId, prefSelected)
-
-			m.Screen.Close()
+	     m.Screen.Close()
 
         End If
     End If
