@@ -52,9 +52,13 @@ End Function
 '** deleteLiveTvRecording
 '**********************************************************
 
-Function deleteLiveTvRecording(recordingId As String) As Boolean
+Function deleteLiveTvRecording(ContentType As String, ItemId As String) As Boolean
 
-    url = GetServerBaseUrl() + "/LiveTv/Recordings/" + HttpEncode(recordingId)
+    if ContentType = "Recording" then
+    	url = GetServerBaseUrl() + "/LiveTv/Recordings/" + HttpEncode(ItemId)
+    else
+    	url = GetServerBaseUrl() + "/Items/" + HttpEncode(ItemId)
+    end if
 
     request = HttpRequest(url)
     request.AddAuthorization()
